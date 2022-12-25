@@ -1,1 +1,4 @@
-{"body": {}, "uri": "https://acme-v02.api.letsencrypt.org/acme/acct/869622957"}
+{
+  "body": {},
+  "uri": "https://acme-v02.api.letsencrypt.org/acme/acct/869622957"
+}

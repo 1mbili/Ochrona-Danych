@@ -97,9 +97,10 @@ def authenticate():
         DB.cursor.execute(
             "SELECT password FROM Users WHERE username = %s", (username,))
         password_in_db = DB.cursor.fetchone()[0]
-        condiction = bcrypt.checkpw(bytes(password+PEPPER, "utf-8"), password_in_db.encode("utf-8"))
+        condiction = bcrypt.checkpw(
+            bytes(password+PEPPER, "utf-8"), password_in_db.encode("utf-8"))
         if condiction:
-            print("123") 
+            print("123")
             response = redirect(url_for('user', username=username), code=302)
             response.set_cookie("jwt", create_username_jwt(
                 username, JWT_SECRET), secure=True, samesite="Strict")
@@ -110,7 +111,7 @@ def authenticate():
         remote_ip = request.environ['REMOTE_ADDR']
         try:
             DB.cursor.execute("INSERT INTO Logins (username, time, remote_ip, result) VALUES (%s, %s, %s, %s)",
-                            (username, time.strftime("%Y-%m-%d %H:%M:%S"), remote_ip, "0"))
+                              (username, time.strftime("%Y-%m-%d %H:%M:%S"), remote_ip, "0"))
             DB.connection.commit()
             set_timeout_if_needed(username)
         finally:
@@ -224,7 +225,7 @@ def get_notes(username: str):
         notes_markdown = []
         for note in notes:
             notel = list(note)
-            notel[2] = bleach.clean(markdown.markdown(notel[2]) )
+            notel[2] = bleach.clean(markdown.markdown(notel[2]))
             notes_markdown.append(notel)
         return notes_markdown
     except:
@@ -256,7 +257,7 @@ def change_notes_settings():
                 title_new, text_new = encrypt_note(note[1], note[2])
                 DB.cursor.execute(
                     "UPDATE Notes SET title = %s, content = %s, encrypted = %s, public = %s WHERE id = %s", (title_new, text_new, user_val[0], user_val[1], i+1))
-            elif user_val[0] == '0' and note[3] :
+            elif user_val[0] == '0' and note[3]:
                 title_new, text_new = decrypt_note(note[1], note[2])
                 DB.cursor.execute(
                     "UPDATE Notes SET title = %s, content = %s, encrypted = %s, public = %s WHERE id = %s", (title_new, text_new, user_val[0], user_val[1], i+1))
@@ -277,18 +278,20 @@ def restore_acces():
         return response
     try:
         username = bleach.clean(request.form.get("username", ""))
-        DB.cursor.execute("SELECT email, id FROM Users WHERE username = %s;", (username,))
+        DB.cursor.execute(
+            "SELECT email, id FROM Users WHERE username = %s;", (username,))
         email, id = DB.cursor.fetchone()
         auth_secret = secrets.token_urlsafe(12)
         expire_time = datetime.now() + timedelta(minutes=30)
-        DB.cursor.execute("INSERT INTO TEMP_CODES (user_id, code, expire_time) VALUES (%s, %s, %s)", (id, auth_secret, expire_time))
+        DB.cursor.execute(
+            "INSERT INTO TEMP_CODES (user_id, code, expire_time) VALUES (%s, %s, %s)", (id, auth_secret, expire_time))
         DB.connection.commit()
         print("AYAYA")
         mail_list = [email]
         send_temp_code(mail_list, auth_secret)
         response = redirect("/restore_acces/verify", code=302)
         response.set_cookie("restore_acces", create_restore_jwt(
-                username, JWT_SECRET), httponly=True, samesite="Strict")
+            username, JWT_SECRET), httponly=True, samesite="Strict")
         return response
     except Exception as e:
         print(e)
@@ -305,7 +308,8 @@ def set_new_password():
     if jwt_restore_data := validate_token(jwt):
         token = bleach.clean(request.form.get("token", ""))
         new_password = bleach.clean(request.form.get("new_password", ""))
-        new_password_conf = bleach.clean(request.form.get("new_password_conf", ""))
+        new_password_conf = bleach.clean(
+            request.form.get("new_password_conf", ""))
         if new_password != new_password_conf:
             flash("Hasła nie są takie same")
             return redirect(request.url)
@@ -329,9 +333,11 @@ def set_new_password():
         if expire_time < datetime.now():
             flash("Kod wygasł")
             return redirect(request.url)
-        DB.cursor.execute("DELETE FROM TEMP_CODES WHERE user_id = %s", (user_id,))
+        DB.cursor.execute(
+            "DELETE FROM TEMP_CODES WHERE user_id = %s", (user_id,))
         DB.connection.commit()
-        DB.cursor.execute("UPDATE Users SET password = %s WHERE id = %s", (encrypt_password(new_password), user_id))
+        DB.cursor.execute("UPDATE Users SET password = %s WHERE id = %s",
+                          (encrypt_password(new_password), user_id))
         DB.connection.commit()
         response = redirect("/", code=302)
         response.set_cookie("restore_acces", "", secure=True, expires=0)

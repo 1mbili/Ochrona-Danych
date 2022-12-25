@@ -1,67 +1,86 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
+  <head>
+    <title>Notatnix</title>
+    <script src="/static/main.js"></script>
+    <script>
+      window.addEventListener("load", function () {
+        start = document.getElementById("start");
+        event.preventDefault();
+        fetch("/notes", { method: "get" })
+          .then((response) => response.text())
+          .then((text) => set_tabelka(text));
+      });
+    </script>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css?family=Rubik:400,700"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/homepage.css') }}"
+      }}
+    />
+  </head>
 
-<head>
-  <title>Notatnix</title>
-  <script src="/static/main.js"></script>
-  <script>
-    window.addEventListener("load", function () {
-      start = document.getElementById("start")
-      event.preventDefault()
-      fetch('/notes', { method: "get" })
-        .then((response) => response.text())
-        .then((text) => set_tabelka(text))
-    });
-  </script>
-  <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Rubik:400,700'>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/homepage.css') }}" }}>
+  <body>
+    <ul>
+      <li><a href="#home">Home</a></li>
+      <li><a href="#addNote">Dodaj Notatkę</a></li>
+      <li><a href="#changeNote" onclick="send_tabelka()">Zapisz zmiany</a></li>
+      <li style="float: right"><a class="active" href="/logout">Wyloguj</a></li>
+    </ul>
 
-</head>
+    <div class="main" id="main">
+      <p id="start">Witaj użytkowniku: {{ username }}.</p>
+      <input
+        type="text"
+        id="myInput"
+        onkeyup="myFunction()"
+        placeholder="Search for names.."
+        title="Type in a name"
+      />
+      <hr />
+      <table id="output"></table>
+    </div>
 
-<body>
-  <ul>
-    <li><a href="#home">Home</a></li>
-    <li><a href="#addNote">Dodaj Notatkę</a></li>
-    <li><a href="#changeNote"  onclick="send_tabelka()">Zapisz zmiany</a></li>
-    <li style="float:right"><a class="active" href="/logout">Wyloguj</a></li>
-  </ul>
-
-  <div class="main" id="main">
-    <p id="start">Witaj użytkowniku: {{ username }}.</p>
-    <input type="text" id="myInput" onkeyup="myFunction()" placeholder="Search for names.." title="Type in a name">
-    <hr>
-    <table id="output"></table>
-
-  </div>
-
-  <div class="overlay" id="addNote">
-    <div class="wrapper">
-      <h2>Dodaj Notatkę</h2><a class="close" href="#">&times;</a>
-      <div class="content">
-        <div class="container">
-          <form action="/user/addNote" method="post">
-            <div class="inline">
-              <div>
-                <label>Tytuł notatki</label>
-                <input name="title" placeholder="Podaj tytuł notatki" type="text">
+    <div class="overlay" id="addNote">
+      <div class="wrapper">
+        <h2>Dodaj Notatkę</h2>
+        <a class="close" href="#">&times;</a>
+        <div class="content">
+          <div class="container">
+            <form action="/user/addNote" method="post">
+              <div class="inline">
+                <div>
+                  <label>Tytuł notatki</label>
+                  <input
+                    name="title"
+                    placeholder="Podaj tytuł notatki"
+                    type="text"
+                  />
+                </div>
+                <div class="label-class">
+                  <label>Zaszyfruj</label>
+                  <input name="encrypt" type="checkbox" />
+                </div>
+                <div class="label-class">
+                  <label>Udostępnij</label>
+                  <input name="public" type="checkbox" />
+                </div>
               </div>
-              <div class="label-class">
-                <label>Zaszyfruj</label>
-                <input name="encrypt" type="checkbox">
-              </div>
-              <div class="label-class">
-                <label>Udostępnij</label>
-                <input name="public" type="checkbox">
-              </div>
-            </div>
-            <label>Notatka</label>
-            <textarea name="markdown" placeholder="Wpisz notatkę" rows="20" cols="100"></textarea>
-            <input type="submit" value="Submit">
-          </form>
+              <label>Notatka</label>
+              <textarea
+                name="markdown"
+                placeholder="Wpisz notatkę"
+                rows="20"
+                cols="100"
+              ></textarea>
+              <input type="submit" value="Submit" />
+            </form>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</body>
-
+  </body>
 </html>

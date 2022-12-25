@@ -60,12 +60,12 @@ def create_username_jwt(username: str, secret: str) -> str:
     zeton = jwt.encode(dane, secret, "HS256")
     return zeton
 
+
 def create_restore_jwt(username: str, secret: str) -> str:
     dt = datetime.now() + timedelta(minutes=30)
     dane = {"username_restore": username, "exp": dt}
     zeton = jwt.encode(dane, secret, "HS256")
     return zeton
-
 
 
 def calculate_entropy(text: str) -> float:
