@@ -49,13 +49,13 @@ def user(username):
 def add_note():
     jwt_data = validate_token(request.cookies.get("jwt"))
     title = bleach.clean(request.form.get("title", ""))
-    markdown = bleach.clean(request.form.get("markdown", ""))
+    markdown_note = bleach.clean(request.form.get("markdown", ""))
     encrypted = bleach.clean(request.form.get("encrypt", '0'))
     public = bleach.clean(request.form.get("public", '0'))
-    if title == "" or markdown == "":
+    if title == "" or markdown_note == "":
         return "Empty note", 204
     if encrypted == "on":
-        title, markdown = encrypt_note(title, markdown)
+        title, markdown_note = encrypt_note(title, markdown_note)
         encrypted = '1'
     if public == "on":
         public = '1'
@@ -63,7 +63,7 @@ def add_note():
         "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
     owner_id = DB.cursor.fetchone()[0]
     DB.cursor.execute("INSERT INTO Notes (owner_id, title, content, encrypted, public) VALUES (%s, %s, %s, %s, %s)",
-                      (owner_id, title, markdown, encrypted, public))
+                      (owner_id, title, markdown_note, encrypted, public))
     DB.connection.commit()
     return redirect(url_for('user', username=jwt_data["username"]), code=302)
 
@@ -97,7 +97,7 @@ def authenticate():
         if condiction:
             response = redirect(url_for('user', username=username), code=302)
             response.set_cookie("jwt", create_username_jwt(
-                username), secure=True, samesite="Strict")
+                username), httponly=True, samesite="Strict")
             return response
         raise Exception()
     except:
@@ -108,7 +108,7 @@ def authenticate():
                               (username, time.strftime("%Y-%m-%d %H:%M:%S"), remote_ip, "0"))
             DB.connection.commit()
             set_timeout_if_needed(username)
-        finally:
+        except:
             return redirect(request.url)
 
 
@@ -217,7 +217,8 @@ def restore_acces():
         mail_list = [email]
         send_temp_code(mail_list, auth_secret)
         response = redirect("/restore_acces/verify", code=302)
-        response.set_cookie("restore_acces", create_restore_jwt(username), httponly=True, samesite="Strict")
+        response.set_cookie("restore_acces", create_restore_jwt(
+            username), httponly=True, samesite="Strict")
         return response
     except Exception as e:
         print(e)

@@ -63,6 +63,8 @@ nescit Si.
 
 
 """
+
+
 class DBManager:
     def __init__(self, database='Notatnix', host="mysql", user="root", password_file=None):
         pf = open(password_file, 'r', encoding='utf-8')
@@ -76,7 +78,7 @@ class DBManager:
         self.cursor = self.connection.cursor(buffered=True)
 
     def debug_propagate_db(self):
-        ## DEBUG ONLY
+        # DEBUG ONLY
         password = encrypt_password("admin")
         password_Jarek = encrypt_password("bob")
         self.cursor.execute(
@@ -88,8 +90,6 @@ class DBManager:
         self.cursor.execute(
             "INSERT INTO Notes (title, content, encrypted, public, owner_id) VALUES ('Lorem ipsum', %s, 0, 1, 2)", (TEXT, ))
         self.connection.commit()
-
-
 
     def Create_Tables(self):
         self.cursor.execute("DROP TABLE IF EXISTS TEMP_CODES")

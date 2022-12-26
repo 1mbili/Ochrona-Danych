@@ -1,13 +1,10 @@
 function set_tabelka(notes) {
-    if (notes == null) notesObj = [];
+    if (notes === null) notesObj = [];
     else notesObj = JSON.parse(notes);
-    console.log(notesObj)
     table = document.getElementById("output")
     row = table.insertRow();
     table.setAttribute("class", "styled-table");
     main.appendChild(table);
-
-    let html = "";
     var perrow = 1;
     notesObj.forEach((vals, i) => {
         cell = row.insertCell();
@@ -74,7 +71,6 @@ function send_tabelka() {
         }
         vals.push(vals2);
     }
-    console.log(vals)
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
         if (xhr.readyState == XMLHttpRequest.DONE) {
@@ -112,9 +108,8 @@ function myFunction() {
 
 
   function set_public_tabelka(notes) {
-    if (notes == null) notesObj = [];
+    if (notes === null) notesObj = [];
     else notesObj = JSON.parse(notes);
-    console.log(notesObj)
     table = document.getElementById("output")
     row = table.insertRow();
     table.setAttribute("class", "styled-table");

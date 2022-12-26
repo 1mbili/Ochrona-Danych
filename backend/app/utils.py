@@ -8,7 +8,6 @@ import secrets
 import string
 import math
 from functools import wraps
-from os import getenv
 from dotenv import load_dotenv
 from flask import request, redirect, url_for
 from datetime import datetime, timedelta
