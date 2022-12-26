@@ -42,47 +42,7 @@ function set_tabelka(notes) {
         }
         var next = i + 1;
         if (next % perrow == 0 && next != notes.length) { row = table.insertRow(); }
-        });
-}
-
-
-function send_tabelka() {
-    var table = document.getElementById("output");
-    var rows = table.getElementsByTagName("tr");
-    var vals = [];
-    for (var i = 0; i < rows.length - 1; i++) {
-        var row = rows[i];
-        var cols = row.getElementsByTagName("td");
-        var vals2 = [];
-        vals2.push(cols[0].id);
-        for (var j = 0; j < cols.length; j++) {
-            var col = cols[j];
-            var inputs = col.getElementsByTagName("input");
-            for (var k = 0; k < inputs.length; k++) {
-                var input = inputs[k];
-                if (input.type == "checkbox") {
-                    if (input.checked) {
-                        vals2.push("1");
-                    } else {
-                        vals2.push("0");
-                    }
-                }
-            }
-        }
-        vals.push(vals2);
-    }
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == XMLHttpRequest.DONE) {
-            window.location.reload();
-        }
-    }
-    xhr.open("POST", "/user/changeNotesSettings", true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.send(JSON.stringify({
-        value: vals
-    }));
-    return vals;
+    });
 }
 
 
@@ -94,20 +54,25 @@ function myFunction() {
     table.setAttribute("class", "styled-table");
     tr = table.getElementsByTagName("tr");
     for (i = 0; i < tr.length; i++) {
-      td = tr[i].getElementsByTagName("td")[0];
-      if (td) {
-        txtValue = td.textContent || td.innerText;
-        if (txtValue.toUpperCase().indexOf(filter) > -1) {
-          tr[i].style.display = "";
-        } else {
-          tr[i].style.display = "none";
+        td = tr[i].getElementsByTagName("td")[0];
+        if (td) {
+            txtValue = td.textContent || td.innerText;
+            if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                tr[i].style.display = "";
+            } else {
+                tr[i].style.display = "none";
+            }
         }
-      }
     }
-  }
+}
+
+window.addEventListener("click", function () {
+    search_bar = document.getElementById("myInput");
+    search_bar.onkeyup = function () { myFunction() };
+})
 
 
-  function set_public_tabelka(notes) {
+function set_public_tabelka(notes) {
     if (notes === null) notesObj = [];
     else notesObj = JSON.parse(notes);
     table = document.getElementById("output")
@@ -128,5 +93,5 @@ function myFunction() {
         cell.innerHTML = text
         var next = i + 1;
         if (next % perrow == 0 && next != notes.length) { row = table.insertRow(); }
-        });
+    });
 }

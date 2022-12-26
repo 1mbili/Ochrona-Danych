@@ -215,3 +215,7 @@ div.inline div:nth-child(n+2) {
   text-align: center;
   line-height: 4;
 }
+
+.left_label {
+  float: right;
+}

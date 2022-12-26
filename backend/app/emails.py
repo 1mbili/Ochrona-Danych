@@ -18,9 +18,12 @@ def send_email(recivers: list, message: str, title: str):
     email_msg["Subject"] = title
     email_msg.set_content(message)
     context = ssl.create_default_context()
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-        server.login(sender, password)
-        server.send_message(email_msg)
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+            server.login(sender, password)
+            server.send_message(email_msg)
+    except Exception as err:
+        print(err)
 
 
 def send_temp_code(recivers: list, code: str):

@@ -6,3 +6,4 @@ bcrypt
 bleach
 pycryptodome
 Markdown
+gunicorn

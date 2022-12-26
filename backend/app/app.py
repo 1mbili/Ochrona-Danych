@@ -12,12 +12,18 @@ from flask import Flask, flash, request, redirect, make_response, url_for
 from flask import render_template
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 load_dotenv(verbose=True)
 
 
 SECRET_CREDENTIALS = getenv("FLASK_SECRET_KEY")
 app = Flask(__name__)
 app.secret_key = SECRET_CREDENTIALS
+app.wsgi_app = ProxyFix(
+    app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+)
+
 
 DB = DBManager(password_file='/run/secrets/db-password')
 
@@ -97,7 +103,7 @@ def authenticate():
         if condiction:
             response = redirect(url_for('user', username=username), code=302)
             response.set_cookie("jwt", create_username_jwt(
-                username), httponly=True, samesite="Strict")
+                username), secure=True, httponly=True, samesite="Strict")
             return response
         raise Exception()
     except:
@@ -108,8 +114,9 @@ def authenticate():
                               (username, time.strftime("%Y-%m-%d %H:%M:%S"), remote_ip, "0"))
             DB.connection.commit()
             set_timeout_if_needed(username)
-        except:
-            return redirect(request.url)
+        except Exception as e:
+            print(e)
+    return redirect(request.url)
 
 
 @app.route("/register", methods=["GET"])
@@ -163,7 +170,7 @@ def user_notes():
 @app.route("/logout", methods=["GET"])
 def logout():
     response = redirect("/", code=302)
-    response.set_cookie("jwt", "", expires=0)
+    response.set_cookie("jwt", b"", expires=0)
     return response
 
 
@@ -200,10 +207,7 @@ def change_notes_settings():
 @app.route("/restore_acces", methods=["GET", "POST"])
 def restore_acces():
     if request.method == "GET":
-        response = make_response(render_template("restore_acces.html"))
-        response.set_cookie("email", "", expires=0)
-        response.set_cookie("username", "", expires=0)
-        return response
+        return make_response(render_template("restore_acces.html"))
     try:
         username = bleach.clean(request.form.get("username", ""))
         DB.cursor.execute(
@@ -218,7 +222,7 @@ def restore_acces():
         send_temp_code(mail_list, auth_secret)
         response = redirect("/restore_acces/verify", code=302)
         response.set_cookie("restore_acces", create_restore_jwt(
-            username), httponly=True, samesite="Strict")
+            username), secure=True, httponly=True, samesite="Strict")
         return response
     except Exception as e:
         print(e)
@@ -235,9 +239,8 @@ def set_new_password():
     if jwt_restore_data := validate_token(jwt):
         token = bleach.clean(request.form.get("token", ""))
         new_password = bleach.clean(request.form.get("new_password", ""))
-        new_password_conf = bleach.clean(
-            request.form.get("new_password_conf", ""))
-        if new_password != new_password_conf:
+        new_password_2 = bleach.clean(request.form.get("new_password_2", ""))
+        if new_password != new_password_2:
             flash("Hasła nie są takie same")
             return redirect(request.url)
         msg, creds_check = validate_password(new_password)
@@ -267,7 +270,8 @@ def set_new_password():
                           (encrypt_password(new_password), user_id))
         DB.connection.commit()
         response = redirect("/", code=302)
-        response.set_cookie("restore_acces", "", secure=True, expires=0)
+        response.set_cookie("restore_acces", "", secure=True,
+                            httponly=True, expires=0)
         return response
     return redirect("/restore_acces")
 

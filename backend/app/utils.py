@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 load_dotenv(verbose=True)
 
 
-ENTROPY_TRESHOLD = 2.5
+ENTROPY_TRESHOLD = 3.25
 DB = DBManager(password_file='/run/secrets/db-password')
 
 
@@ -62,11 +62,13 @@ def set_timeout_if_needed(username: str):
         nth_last_login = get_nth_login(username, 5)
         time_now = datetime.now()
         dateTime_5mins_ago = time_now + timedelta(minutes=-5)
+        print(nth_last_login, dateTime_5mins_ago)
         if nth_last_login > dateTime_5mins_ago:
             DB.cursor.execute("INSERT INTO Timeouts (username, expire_time) VALUES (%s, %s)", (
                 username, (time_now + timedelta(minutes=3)).strftime("%Y-%m-%d %H:%M:%S")))
             DB.connection.commit()
-    except:
+    except Exception as e:
+        print(e)
         return
 
 

@@ -32,6 +32,7 @@ services:
     build:
       context: backend
       dockerfile: Dockerfile
+    command: gunicorn --bind 0.0.0.0:8000 manage:app
     restart: always
     secrets:
       - db-password
@@ -40,8 +41,6 @@ services:
     networks:
       - backnet
       - frontnet
-    ports:
-      - 8000:8000
     depends_on:
       mysql:
         condition: service_healthy
@@ -54,7 +53,6 @@ services:
       - 443:443
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
-      - ./certbot/www:/var/www/certbot/:ro
       - ./certbot/conf/:/etc/nginx/ssl/:ro
     depends_on: 
       - backend
