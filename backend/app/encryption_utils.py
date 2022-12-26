@@ -18,6 +18,10 @@ def encrypt_password(password: str) -> bytes:
     """Encrypt password with bcrypt"""
     return bcrypt.hashpw(bytes(password+PEPPER, "utf-8"), bcrypt.gensalt())
 
+def check_password(password: str, hashed_password: bytes) -> bool:
+    """Check if password is correct"""
+    return bcrypt.checkpw(bytes(password+PEPPER, "utf-8"), hashed_password)
+
 
 def encrypt_note(title: str, markdown: str) -> tuple:
     """Encrypt note"""

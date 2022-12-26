@@ -1,10 +1,9 @@
-from encryption_utils import encrypt_password, encrypt_note, decrypt_note
+from encryption_utils import encrypt_password, encrypt_note, decrypt_note, check_password
 from db_manager import DBManager
 from emails import send_temp_code
 from jwt_utils import create_username_jwt, create_restore_jwt, validate_token
 from utils import validate_password, login_required, set_timeout_if_needed, check_if_new_ip, check_if_user_is_timeouted
 import bleach
-import bcrypt
 import time
 import markdown
 import secrets
@@ -16,9 +15,7 @@ from dotenv import load_dotenv
 load_dotenv(verbose=True)
 
 
-JWT_SECRET = getenv("JWT_SECRET")
 SECRET_CREDENTIALS = getenv("FLASK_SECRET_KEY")
-PEPPER = getenv("PEPPER")
 app = Flask(__name__)
 app.secret_key = SECRET_CREDENTIALS
 
@@ -43,7 +40,6 @@ def index():
 def user(username):
     jwt = validate_token(request.cookies.get("jwt"))
     if jwt and username == jwt["username"]:
-        notes = get_notes(username)
         return render_template("homepage.html", username=username)
     return "Unauthorized", 401
 
@@ -97,13 +93,11 @@ def authenticate():
         DB.cursor.execute(
             "SELECT password FROM Users WHERE username = %s", (username,))
         password_in_db = DB.cursor.fetchone()[0]
-        condiction = bcrypt.checkpw(
-            bytes(password+PEPPER, "utf-8"), password_in_db.encode("utf-8"))
+        condiction = check_password(password, password_in_db.encode("utf-8"))
         if condiction:
-            print("123")
             response = redirect(url_for('user', username=username), code=302)
             response.set_cookie("jwt", create_username_jwt(
-                username, JWT_SECRET), secure=True, samesite="Strict")
+                username), secure=True, samesite="Strict")
             return response
         raise Exception()
     except:
@@ -166,24 +160,6 @@ def user_notes():
     return notes_markdown
 
 
-def get_notes(username: str):
-    try:
-        DB.cursor.execute(
-            "SELECT id FROM Users WHERE username = %s", (username,))
-        owner_id = DB.cursor.fetchone()[0]
-        DB.cursor.execute(
-            "SELECT id, title, content, encrypted, public FROM Notes WHERE owner_id = %s ORDER BY id ASC", (owner_id,))
-        notes = DB.cursor.fetchall()
-        notes_markdown = []
-        for note in notes:
-            notel = list(note)
-            notel[2] = bleach.clean(markdown.markdown(notel[2]))
-            notes_markdown.append(notel)
-        return notes_markdown
-    except:
-        return []
-
-
 @app.route("/logout", methods=["GET"])
 def logout():
     response = redirect("/", code=302)
@@ -241,8 +217,7 @@ def restore_acces():
         mail_list = [email]
         send_temp_code(mail_list, auth_secret)
         response = redirect("/restore_acces/verify", code=302)
-        response.set_cookie("restore_acces", create_restore_jwt(
-            username, JWT_SECRET), httponly=True, samesite="Strict")
+        response.set_cookie("restore_acces", create_restore_jwt(username), httponly=True, samesite="Strict")
         return response
     except Exception as e:
         print(e)

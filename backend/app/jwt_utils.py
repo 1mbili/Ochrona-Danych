@@ -22,15 +22,15 @@ def validate_token(token: str) -> bool:
         return False
 
 
-def create_username_jwt(username: str, secret: str) -> str:
+def create_username_jwt(username: str) -> str:
     dt = datetime.now() + timedelta(minutes=30)
     dane = {"username": username, "exp": dt}
-    zeton = encode(dane, secret, "HS256")
+    zeton = encode(dane, JWT_SECRET, "HS256")
     return zeton
 
 
-def create_restore_jwt(username: str, secret: str) -> str:
+def create_restore_jwt(username: str) -> str:
     dt = datetime.now() + timedelta(minutes=30)
     dane = {"username_restore": username, "exp": dt}
-    zeton = encode(dane, secret, "HS256")
+    zeton = encode(dane, JWT_SECRET, "HS256")
     return zeton
