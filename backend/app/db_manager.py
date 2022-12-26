@@ -1,5 +1,5 @@
 import mysql.connector
-from utils import encrypt_password
+from encryption_utils import encrypt_password
 
 TEXT = """
 # Herboso iaculum quando
@@ -75,7 +75,8 @@ class DBManager:
         pf.close()
         self.cursor = self.connection.cursor(buffered=True)
 
-    def propagate_db(self):
+    def debug_propagate_db(self):
+        ## DEBUG ONLY
         password = encrypt_password("admin")
         password_Jarek = encrypt_password("bob")
         self.cursor.execute(
@@ -107,4 +108,3 @@ class DBManager:
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS TEMP_CODES (id_code INT AUTO_INCREMENT PRIMARY KEY, user_id INT, FOREIGN KEY (user_id) REFERENCES Users(id), code VARCHAR(255), expire_time DATETIME )")
         self.connection.commit()
-

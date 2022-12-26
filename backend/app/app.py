@@ -1,3 +1,8 @@
+from encryption_utils import encrypt_password, encrypt_note, decrypt_note
+from db_manager import DBManager
+from emails import send_temp_code
+from jwt_utils import create_username_jwt, create_restore_jwt, validate_token
+from utils import validate_password, login_required, set_timeout_if_needed, check_if_new_ip, check_if_user_is_timeouted
 import bleach
 import bcrypt
 import time
@@ -6,14 +11,10 @@ import secrets
 from os import getenv
 from flask import Flask, flash, request, redirect, make_response, url_for
 from flask import render_template
-from functools import wraps
-from dotenv import load_dotenv
-from utils import validate_token, create_username_jwt, validate_password, \
-encrypt_password, encrypt_note, decrypt_note, create_restore_jwt, login_required
 from datetime import datetime, timedelta
-from emails import send_email, send_temp_code
-from db_manager import DBManager
+from dotenv import load_dotenv
 load_dotenv(verbose=True)
+
 
 JWT_SECRET = getenv("JWT_SECRET")
 SECRET_CREDENTIALS = getenv("FLASK_SECRET_KEY")
@@ -22,6 +23,7 @@ app = Flask(__name__)
 app.secret_key = SECRET_CREDENTIALS
 
 DB = DBManager(password_file='/run/secrets/db-password')
+
 
 @app.route("/", methods=["GET"])
 def index():
@@ -35,11 +37,16 @@ def index():
         return redirect(url_for('user', username=username), code=302)
     return redirect("/authenticate", code=302)
 
+
 @login_required
 @app.route("/user/<username>", methods=["GET"])
 def user(username):
-    notes = get_notes(username)
-    return render_template("homepage.html", username=username, notes=notes)
+    jwt = validate_token(request.cookies.get("jwt"))
+    if jwt and username == jwt["username"]:
+        notes = get_notes(username)
+        return render_template("homepage.html", username=username)
+    return "Unauthorized", 401
+
 
 @login_required
 @app.route("/user/addNote", methods=["POST"])
@@ -60,7 +67,7 @@ def add_note():
         "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
     owner_id = DB.cursor.fetchone()[0]
     DB.cursor.execute("INSERT INTO Notes (owner_id, title, content, encrypted, public) VALUES (%s, %s, %s, %s, %s)",
-                        (owner_id, title, markdown, encrypted, public))
+                      (owner_id, title, markdown, encrypted, public))
     DB.connection.commit()
     return redirect(url_for('user', username=jwt_data["username"]), code=302)
 
@@ -109,53 +116,6 @@ def authenticate():
             set_timeout_if_needed(username)
         finally:
             return redirect(request.url)
-
-
-def set_timeout_if_needed(username: str):
-    try:
-        nth_last_login = get_nth_login(username, 5)
-        time_now = datetime.now()
-        dateTime_5mins_ago = time_now + timedelta(minutes=-5)
-        if nth_last_login > dateTime_5mins_ago:
-            DB.cursor.execute("INSERT INTO Timeouts (username, expire_time) VALUES (%s, %s)", (
-                username, (time_now + timedelta(minutes=3)).strftime("%Y-%m-%d %H:%M:%S")))
-            DB.connection.commit()
-    except:
-        return
-
-
-def get_nth_login(username: str, nth_login: str):
-    DB.cursor.execute(
-        "SELECT time FROM Logins WHERE username = %s AND result = false ORDER BY time DESC LIMIT 1 OFFSET %s", (username, nth_login))
-    try:
-        return DB.cursor.fetchone()[0]
-    except:
-        raise Exception("Not enough logins")
-
-
-def check_if_user_is_timeouted(username: str):
-    DB.cursor.execute(
-        "SELECT expire_time FROM Timeouts WHERE username = %s", (username,))
-    try:
-        expire_time = DB.cursor.fetchone()[0]
-        time_now = datetime.now()
-        if expire_time > time_now:
-            return True
-    except:
-        return False
-
-
-def check_if_new_ip(username: str, remote_ip: str):
-    DB.cursor.execute(
-        "SELECT remote_ip FROM Logins WHERE username = %s and remote_ip = %s", (username, remote_ip))
-    if DB.cursor.fetchone() is None:
-        msg = f"""
-        Witaj {username}!
-        Wykryto nowe połączenie z adresu IP: {remote_ip}.
-        Pozdrawiamy,
-        Zespół Notatnix
-        """
-        send_email(username, msg, "Zalogowano na nowym urządzeniu")
 
 
 @app.route("/register", methods=["GET"])
@@ -229,6 +189,7 @@ def logout():
     response = redirect("/", code=302)
     response.set_cookie("jwt", "", expires=0)
     return response
+
 
 @login_required
 @app.route("/user/changeNotesSettings", methods=["POST"])
@@ -352,6 +313,5 @@ def public_notes():
             notel[3] = markdown.markdown(notel[3])
             notes_markdown.append(notel)
         return notes_markdown
-
     except:
         return "Błąd", 500

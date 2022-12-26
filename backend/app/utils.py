@@ -1,27 +1,23 @@
 """
 Utils functions for flask app
 """
-import base64
+from jwt_utils import validate_token
+from emails import send_email
+from db_manager import DBManager
 import secrets
-import bcrypt
 import string
-import jwt
 import math
 from functools import wraps
-from datetime import datetime, timedelta
 from os import getenv
 from dotenv import load_dotenv
 from flask import request, redirect, url_for
-from jwt import decode
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-from Crypto.Util.Padding import pad, unpad
+from datetime import datetime, timedelta
 load_dotenv(verbose=True)
 
-PEPPER = getenv("PEPPER")
-JWT_SECRET = getenv("JWT_SECRET")
-AES_KEY = getenv("AES_KEY").encode()
+
 ENTROPY_TRESHOLD = 2.5
+DB = DBManager(password_file='/run/secrets/db-password')
+
 
 def validate_password(password: str) -> bool:
     """Check if user password is valid"""
@@ -35,38 +31,9 @@ def validate_password(password: str) -> bool:
     return "", True
 
 
-def encrypt_password(password: str) -> bytes:
-    """Encrypt password with bcrypt"""
-    return bcrypt.hashpw(bytes(password+PEPPER, "utf-8"), bcrypt.gensalt())
-
-
 def generate_state(length=30) -> str:
     """Generate random state"""
     return "".join(secrets.choice(string.ascii_letters+string.digits) for _ in range(length))
-
-
-def validate_token(token: str) -> bool:
-    if token == "":
-        return False
-    try:
-        decoded = decode(token, JWT_SECRET, algorithms=["HS256"])
-        return decoded
-    except Exception as err:
-        print(err)
-        return False
-
-
-def create_username_jwt(username: str, secret: str) -> str:
-    dt = datetime.now() + timedelta(minutes=30)
-    dane = {"username": username, "exp": dt}
-    zeton = jwt.encode(dane, secret, "HS256")
-    return zeton
-
-def create_restore_jwt(username: str, secret: str) -> str:
-    dt = datetime.now() + timedelta(minutes=30)
-    dane = {"username_restore": username, "exp": dt}
-    zeton = jwt.encode(dane, secret, "HS256")
-    return zeton
 
 
 def calculate_entropy(text: str) -> float:
@@ -81,43 +48,58 @@ def calculate_entropy(text: str) -> float:
     return entropy
 
 
-def encrypt_note(title: str, markdown: str) -> tuple:
-    """Encrypt note"""
-    title = aes_encrypt(title)
-    markdown = aes_encrypt(markdown)
-    return title, markdown
-
-
-def decrypt_note(title: str, markdown: str) -> tuple:
-    """Decrypt note"""
-    title = aes_decrypt(title).decode("utf-8")
-    markdown = aes_decrypt(markdown).decode("utf-8")
-    print("marrl", title, markdown)
-    return title, markdown
-
-
-def aes_encrypt(text: str) -> str:
-    """Encrypt text with key"""
-    iv = get_random_bytes(16)
-    aes = AES.new(AES_KEY, AES.MODE_CBC, iv)
-    encrypted_data = aes.encrypt(pad(text.encode(), 16))
-    return base64.b64encode(iv+encrypted_data)
-
-
-def aes_decrypt(text: str) -> str:
-    """Decrypt text with key"""
-    text = base64.b64decode(text)
-    iv, msg = text[:16], text[16:]
-    aes = AES.new(AES_KEY, AES.MODE_CBC, iv)
-    decrypted_data = unpad(aes.decrypt(msg), 16)
-    return decrypted_data
-
-
 def login_required(f):
     """Veryfies if user has valid jwt token"""
     @wraps(f)
-    def decorated_function(*args, **kwargs): 
+    def decorated_function(*args, **kwargs):
         if not validate_token(request.cookies.get("jwt")):
             return redirect(url_for("authenticate"))
         return f(*args, **kwargs)
     return decorated_function
+
+
+def set_timeout_if_needed(username: str):
+    try:
+        nth_last_login = get_nth_login(username, 5)
+        time_now = datetime.now()
+        dateTime_5mins_ago = time_now + timedelta(minutes=-5)
+        if nth_last_login > dateTime_5mins_ago:
+            DB.cursor.execute("INSERT INTO Timeouts (username, expire_time) VALUES (%s, %s)", (
+                username, (time_now + timedelta(minutes=3)).strftime("%Y-%m-%d %H:%M:%S")))
+            DB.connection.commit()
+    except:
+        return
+
+
+def get_nth_login(username: str, nth_login: str):
+    DB.cursor.execute(
+        "SELECT time FROM Logins WHERE username = %s AND result = false ORDER BY time DESC LIMIT 1 OFFSET %s", (username, nth_login))
+    try:
+        return DB.cursor.fetchone()[0]
+    except:
+        raise Exception("Not enough logins")
+
+
+def check_if_user_is_timeouted(username: str):
+    DB.cursor.execute(
+        "SELECT expire_time FROM Timeouts WHERE username = %s", (username,))
+    try:
+        expire_time = DB.cursor.fetchone()[0]
+        time_now = datetime.now()
+        if expire_time > time_now:
+            return True
+    except:
+        return False
+
+
+def check_if_new_ip(username: str, remote_ip: str):
+    DB.cursor.execute(
+        "SELECT remote_ip FROM Logins WHERE username = %s and remote_ip = %s", (username, remote_ip))
+    if DB.cursor.fetchone() is None:
+        msg = f"""
+        Witaj {username}!
+        Wykryto nowe połączenie z adresu IP: {remote_ip}.
+        Pozdrawiamy,
+        Zespół Notatnix
+        """
+        send_email(username, msg, "Zalogowano na nowym urządzeniu")
