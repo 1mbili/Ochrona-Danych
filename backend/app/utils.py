@@ -7,9 +7,11 @@ import bcrypt
 import string
 import jwt
 import math
+from functools import wraps
 from datetime import datetime, timedelta
 from os import getenv
 from dotenv import load_dotenv
+from flask import request, redirect, url_for
 from jwt import decode
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
@@ -19,7 +21,7 @@ load_dotenv(verbose=True)
 PEPPER = getenv("PEPPER")
 JWT_SECRET = getenv("JWT_SECRET")
 AES_KEY = getenv("AES_KEY").encode()
-
+ENTROPY_TRESHOLD = 2.5
 
 def validate_password(password: str) -> bool:
     """Check if user password is valid"""
@@ -28,7 +30,7 @@ def validate_password(password: str) -> bool:
     if not any(char.isdigit() for char in password):
         return "Hasło musi zawierać cyfrę", False
     print(calculate_entropy(password))
-    if calculate_entropy(password) < 2.5:
+    if calculate_entropy(password) < ENTROPY_TRESHOLD:
         return "Hasło jest zbyt proste", False
     return "", True
 
@@ -65,7 +67,6 @@ def create_restore_jwt(username: str, secret: str) -> str:
     dane = {"username_restore": username, "exp": dt}
     zeton = jwt.encode(dane, secret, "HS256")
     return zeton
-
 
 
 def calculate_entropy(text: str) -> float:
@@ -110,3 +111,13 @@ def aes_decrypt(text: str) -> str:
     aes = AES.new(AES_KEY, AES.MODE_CBC, iv)
     decrypted_data = unpad(aes.decrypt(msg), 16)
     return decrypted_data
+
+
+def login_required(f):
+    """Veryfies if user has valid jwt token"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs): 
+        if not validate_token(request.cookies.get("jwt")):
+            return redirect(url_for("authenticate"))
+        return f(*args, **kwargs)
+    return decorated_function

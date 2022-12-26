@@ -11,6 +11,7 @@ function set_tabelka(notes) {
     var perrow = 1;
     notesObj.forEach((vals, i) => {
         cell = row.insertCell();
+        cell.id = vals[0];
         text = `
         <div>
         <label class="tabela_label">${vals[1]}</label>
@@ -56,6 +57,7 @@ function send_tabelka() {
         var row = rows[i];
         var cols = row.getElementsByTagName("td");
         var vals2 = [];
+        vals2.push(cols[0].id);
         for (var j = 0; j < cols.length; j++) {
             var col = cols[j];
             var inputs = col.getElementsByTagName("input");
@@ -106,4 +108,30 @@ function myFunction() {
         }
       }
     }
-  }d
+  }
+
+
+  function set_public_tabelka(notes) {
+    if (notes == null) notesObj = [];
+    else notesObj = JSON.parse(notes);
+    console.log(notesObj)
+    table = document.getElementById("output")
+    row = table.insertRow();
+    table.setAttribute("class", "styled-table");
+    main.appendChild(table);
+    var perrow = 1;
+    notesObj.forEach((vals, i) => {
+        cell = row.insertCell();
+        text = `
+        <div>
+        <label class="tabela_label">${vals[2]} - ${vals[1]}</label>
+        </div>
+        <div>
+        <label>${vals[3]}</label>
+        </div>
+        `;
+        cell.innerHTML = text
+        var next = i + 1;
+        if (next % perrow == 0 && next != notes.length) { row = table.insertRow(); }
+        });
+}

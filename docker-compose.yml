@@ -31,6 +31,7 @@ services:
   backend:
     build:
       context: backend
+      dockerfile: Dockerfile
     restart: always
     secrets:
       - db-password
@@ -46,7 +47,7 @@ services:
         condition: service_healthy
 
   proxy:
-    image: nginx:1.13-alpine
+    image: nginx:1.23-alpine
     restart: always
     ports:
       - 80:80
@@ -59,7 +60,6 @@ services:
       - backend
     networks:
       - frontnet
-
 
 volumes:
   db-data:

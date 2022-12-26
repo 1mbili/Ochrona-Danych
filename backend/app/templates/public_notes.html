@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+
+<head>
+  <title>Notatnix</title>
+  <script src="/static/main.js"></script>
+  <script>
+    window.addEventListener("load", function () {
+      start = document.getElementById("start")
+      event.preventDefault()
+      fetch('/public_notes', { method: "get" })
+        .then((response) => response.text())
+        .then((text) => set_public_tabelka(text))
+    });
+  </script>
+  <link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Rubik:400,700'>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/homepage.css') }}" }}>
+
+</head>
+
+<body>
+  <ul>
+    <li><a href="#home">Home</a></li> 
+    <li style="float:right"><a class="active" href="/logout">Wróć</a></li>
+  </ul>
+  <div class="main" id="main">
+    <p id="start">Przeglądanie publicznych notatek.</p>
+    <input type="text" id="myInput" onkeyup="myFunction()" placeholder="Search for names.." title="Type in a name">
+    <hr>
+    <table id="output"></table>
+  </div>
+</body>
+</html>

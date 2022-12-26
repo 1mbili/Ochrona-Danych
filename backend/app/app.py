@@ -6,8 +6,10 @@ import secrets
 from os import getenv
 from flask import Flask, flash, request, redirect, make_response, url_for
 from flask import render_template
+from functools import wraps
 from dotenv import load_dotenv
-from utils import validate_token, create_username_jwt, validate_password, encrypt_password, encrypt_note, decrypt_note, create_restore_jwt
+from utils import validate_token, create_username_jwt, validate_password, \
+encrypt_password, encrypt_note, decrypt_note, create_restore_jwt, login_required
 from datetime import datetime, timedelta
 from emails import send_email, send_temp_code
 from db_manager import DBManager
@@ -19,10 +21,7 @@ PEPPER = getenv("PEPPER")
 app = Flask(__name__)
 app.secret_key = SECRET_CREDENTIALS
 
-
 DB = DBManager(password_file='/run/secrets/db-password')
-DB.Create_Tables()
-
 
 @app.route("/", methods=["GET"])
 def index():
@@ -36,40 +35,34 @@ def index():
         return redirect(url_for('user', username=username), code=302)
     return redirect("/authenticate", code=302)
 
-
+@login_required
 @app.route("/user/<username>", methods=["GET"])
 def user(username):
-    jwt = request.cookies.get("jwt")
-    jwt_data = validate_token(jwt)
-    if jwt_data and jwt_data["username"] == username:
-        notes = get_notes(username)
-        return render_template("homepage.html", username=username, notes=notes)
-    return redirect("/authenticate", code=302)
+    notes = get_notes(username)
+    return render_template("homepage.html", username=username, notes=notes)
 
-
+@login_required
 @app.route("/user/addNote", methods=["POST"])
 def add_note():
-    jwt = request.cookies.get("jwt")
-    if jwt_data := validate_token(jwt):
-        title = bleach.clean(request.form.get("title", ""))
-        markdown = bleach.clean(request.form.get("markdown", ""))
-        encrypted = bleach.clean(request.form.get("encrypt", '0'))
-        public = bleach.clean(request.form.get("public", '0'))
-        if title == "" or markdown == "":
-            return "Empty note", 204
-        if encrypted == "on":
-            title, markdown = encrypt_note(title, markdown)
-            encrypted = '1'
-        if public == "on":
-            public = '1'
-        DB.cursor.execute(
-            "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
-        owner_id = DB.cursor.fetchone()[0]
-        DB.cursor.execute("INSERT INTO Notes (owner_id, title, content, encrypted, public) VALUES (%s, %s, %s, %s, %s)",
-                          (owner_id, title, markdown, encrypted, public))
-        DB.connection.commit()
-        return redirect(url_for('user', username=jwt_data["username"]), code=302)
-    return "Unauthorized", 401
+    jwt_data = validate_token(request.cookies.get("jwt"))
+    title = bleach.clean(request.form.get("title", ""))
+    markdown = bleach.clean(request.form.get("markdown", ""))
+    encrypted = bleach.clean(request.form.get("encrypt", '0'))
+    public = bleach.clean(request.form.get("public", '0'))
+    if title == "" or markdown == "":
+        return "Empty note", 204
+    if encrypted == "on":
+        title, markdown = encrypt_note(title, markdown)
+        encrypted = '1'
+    if public == "on":
+        public = '1'
+    DB.cursor.execute(
+        "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
+    owner_id = DB.cursor.fetchone()[0]
+    DB.cursor.execute("INSERT INTO Notes (owner_id, title, content, encrypted, public) VALUES (%s, %s, %s, %s, %s)",
+                        (owner_id, title, markdown, encrypted, public))
+    DB.connection.commit()
+    return redirect(url_for('user', username=jwt_data["username"]), code=302)
 
 
 @app.route("/authenticate", methods=["GET"])
@@ -80,7 +73,7 @@ def get_authenticate():
 @app.route("/authenticate", methods=["POST"])
 def authenticate():
     time.sleep(0.25)
-    subpages = ["register", "restore_acces"]
+    subpages = ["register", "restore_acces", "anonymous_view"]
     if "auth" not in request.form.keys():
         for subpage in subpages:
             if subpage in request.form.keys():
@@ -97,9 +90,10 @@ def authenticate():
         DB.cursor.execute(
             "SELECT password FROM Users WHERE username = %s", (username,))
         password_in_db = DB.cursor.fetchone()[0]
-        condiction = bcrypt.checkpw(bytes(password+PEPPER, "utf-8"), password_in_db.encode("utf-8"))
+        condiction = bcrypt.checkpw(
+            bytes(password+PEPPER, "utf-8"), password_in_db.encode("utf-8"))
         if condiction:
-            print("123") 
+            print("123")
             response = redirect(url_for('user', username=username), code=302)
             response.set_cookie("jwt", create_username_jwt(
                 username, JWT_SECRET), secure=True, samesite="Strict")
@@ -110,7 +104,7 @@ def authenticate():
         remote_ip = request.environ['REMOTE_ADDR']
         try:
             DB.cursor.execute("INSERT INTO Logins (username, time, remote_ip, result) VALUES (%s, %s, %s, %s)",
-                            (username, time.strftime("%Y-%m-%d %H:%M:%S"), remote_ip, "0"))
+                              (username, time.strftime("%Y-%m-%d %H:%M:%S"), remote_ip, "0"))
             DB.connection.commit()
             set_timeout_if_needed(username)
         finally:
@@ -194,23 +188,22 @@ def register():
     return response
 
 
+@login_required
 @app.route("/notes", methods=["GET"])
 def user_notes():
-    jwt = request.cookies.get("jwt")
-    if jwt_data := validate_token(jwt):
-        DB.cursor.execute(
-            "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
-        owner_id = DB.cursor.fetchone()[0]
-        DB.cursor.execute(
-            "SELECT id, title, content, encrypted, public FROM Notes WHERE owner_id = %s", (owner_id,))
-        notes = DB.cursor.fetchall()
-        notes_markdown = []
-        for note in notes:
-            notel = list(note)
-            notel[2] = markdown.markdown(notel[2])
-            notes_markdown.append(notel)
-        return notes_markdown
-    return "Unauthorized", 401
+    jwt_data = validate_token(request.cookies.get("jwt"))
+    DB.cursor.execute(
+        "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
+    owner_id = DB.cursor.fetchone()[0]
+    DB.cursor.execute(
+        "SELECT id, title, content, encrypted, public FROM Notes WHERE owner_id = %s", (owner_id,))
+    notes = DB.cursor.fetchall()
+    notes_markdown = []
+    for note in notes:
+        notel = list(note)
+        notel[2] = markdown.markdown(notel[2])
+        notes_markdown.append(notel)
+    return notes_markdown
 
 
 def get_notes(username: str):
@@ -224,7 +217,7 @@ def get_notes(username: str):
         notes_markdown = []
         for note in notes:
             notel = list(note)
-            notel[2] = bleach.clean(markdown.markdown(notel[2]) )
+            notel[2] = bleach.clean(markdown.markdown(notel[2]))
             notes_markdown.append(notel)
         return notes_markdown
     except:
@@ -237,35 +230,34 @@ def logout():
     response.set_cookie("jwt", "", expires=0)
     return response
 
-
+@login_required
 @app.route("/user/changeNotesSettings", methods=["POST"])
 def change_notes_settings():
-    jwt = request.cookies.get("jwt")
-    if jwt_data := validate_token(jwt):
-        client_data = request.json['value']
-        DB.cursor.execute(
-            "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
-        owner_id = DB.cursor.fetchone()[0]
-        DB.cursor.execute(
-            "SELECT id, title, content, encrypted, public FROM Notes WHERE owner_id = %s ORDER BY id ASC", (owner_id,))
-        notes = DB.cursor.fetchall()
-        if len(notes) != len(client_data):
-            return "Błąd  ", 401
-        for i, (note, user_val) in enumerate(zip(notes, client_data)):
-            if user_val[0] == '1' and not note[3]:
-                title_new, text_new = encrypt_note(note[1], note[2])
-                DB.cursor.execute(
-                    "UPDATE Notes SET title = %s, content = %s, encrypted = %s, public = %s WHERE id = %s", (title_new, text_new, user_val[0], user_val[1], i+1))
-            elif user_val[0] == '0' and note[3] :
-                title_new, text_new = decrypt_note(note[1], note[2])
-                DB.cursor.execute(
-                    "UPDATE Notes SET title = %s, content = %s, encrypted = %s, public = %s WHERE id = %s", (title_new, text_new, user_val[0], user_val[1], i+1))
-            else:
-                DB.cursor.execute(
-                    "UPDATE Notes SET encrypted = %s, public = %s WHERE id = %s", (user_val[0], user_val[1], i+1))
-            DB.connection.commit()
-        return "OKi", 204
-    return "Unauthorized", 401
+    jwt_data = validate_token(request.cookies.get("jwt"))
+    client_data = request.json['value']
+    DB.cursor.execute(
+        "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
+    owner_id = DB.cursor.fetchone()[0]
+    DB.cursor.execute(
+        "SELECT id, title, content, encrypted, public FROM Notes WHERE owner_id = %s ORDER BY id ASC", (owner_id,))
+    notes = DB.cursor.fetchall()
+    if len(notes) != len(client_data):
+        return "Błąd  ", 401
+    for note, user_val in zip(notes, client_data):
+        note_id, is_encrypted, is_public = (int(x) for x in user_val)
+        if is_encrypted == 1 and not note[3]:
+            title_new, text_new = encrypt_note(note[1], note[2])
+            DB.cursor.execute(
+                "UPDATE Notes SET title = %s, content = %s, encrypted = %s, public = %s WHERE id = %s", (title_new, text_new, is_encrypted, is_public, note_id))
+        elif is_encrypted == 0 and note[3]:
+            title_new, text_new = decrypt_note(note[1], note[2])
+            DB.cursor.execute(
+                "UPDATE Notes SET title = %s, content = %s, encrypted = %s, public = %s WHERE id = %s", (title_new, text_new, is_encrypted, is_public, note_id))
+        else:
+            DB.cursor.execute(
+                "UPDATE Notes SET encrypted = %s, public = %s WHERE id = %s", (is_encrypted, is_public, note_id))
+        DB.connection.commit()
+    return "OK", 204
 
 
 @app.route("/restore_acces", methods=["GET", "POST"])
@@ -277,18 +269,19 @@ def restore_acces():
         return response
     try:
         username = bleach.clean(request.form.get("username", ""))
-        DB.cursor.execute("SELECT email, id FROM Users WHERE username = %s;", (username,))
+        DB.cursor.execute(
+            "SELECT email, id FROM Users WHERE username = %s;", (username,))
         email, id = DB.cursor.fetchone()
         auth_secret = secrets.token_urlsafe(12)
         expire_time = datetime.now() + timedelta(minutes=30)
-        DB.cursor.execute("INSERT INTO TEMP_CODES (user_id, code, expire_time) VALUES (%s, %s, %s)", (id, auth_secret, expire_time))
+        DB.cursor.execute(
+            "INSERT INTO TEMP_CODES (user_id, code, expire_time) VALUES (%s, %s, %s)", (id, auth_secret, expire_time))
         DB.connection.commit()
-        print("AYAYA")
         mail_list = [email]
         send_temp_code(mail_list, auth_secret)
         response = redirect("/restore_acces/verify", code=302)
         response.set_cookie("restore_acces", create_restore_jwt(
-                username, JWT_SECRET), httponly=True, samesite="Strict")
+            username, JWT_SECRET), httponly=True, samesite="Strict")
         return response
     except Exception as e:
         print(e)
@@ -305,7 +298,8 @@ def set_new_password():
     if jwt_restore_data := validate_token(jwt):
         token = bleach.clean(request.form.get("token", ""))
         new_password = bleach.clean(request.form.get("new_password", ""))
-        new_password_conf = bleach.clean(request.form.get("new_password_conf", ""))
+        new_password_conf = bleach.clean(
+            request.form.get("new_password_conf", ""))
         if new_password != new_password_conf:
             flash("Hasła nie są takie same")
             return redirect(request.url)
@@ -329,11 +323,35 @@ def set_new_password():
         if expire_time < datetime.now():
             flash("Kod wygasł")
             return redirect(request.url)
-        DB.cursor.execute("DELETE FROM TEMP_CODES WHERE user_id = %s", (user_id,))
+        DB.cursor.execute(
+            "DELETE FROM TEMP_CODES WHERE user_id = %s", (user_id,))
         DB.connection.commit()
-        DB.cursor.execute("UPDATE Users SET password = %s WHERE id = %s", (encrypt_password(new_password), user_id))
+        DB.cursor.execute("UPDATE Users SET password = %s WHERE id = %s",
+                          (encrypt_password(new_password), user_id))
         DB.connection.commit()
         response = redirect("/", code=302)
         response.set_cookie("restore_acces", "", secure=True, expires=0)
         return response
     return redirect("/restore_acces")
+
+
+@app.route("/anonymous_view", methods=["GET"])
+def anonymous_view():
+    return render_template("public_notes.html")
+
+
+@app.route("/public_notes", methods=["GET"])
+def public_notes():
+    try:
+        DB.cursor.execute(
+            "SELECT u.id, u.username, n.title, n.content FROM Notes n INNER JOIN Users u ON n.owner_id = u.id WHERE public = 1 ORDER BY id ASC")
+        notes = DB.cursor.fetchall()
+        notes_markdown = []
+        for note in notes:
+            notel = list(note)
+            notel[3] = markdown.markdown(notel[3])
+            notes_markdown.append(notel)
+        return notes_markdown
+
+    except:
+        return "Błąd", 500
