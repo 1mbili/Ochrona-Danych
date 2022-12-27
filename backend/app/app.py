@@ -2,7 +2,8 @@ from encryption_utils import encrypt_password, encrypt_note, decrypt_note, check
 from db_manager import DBManager
 from emails import send_temp_code
 from jwt_utils import create_username_jwt, create_restore_jwt, validate_token
-from utils import validate_password, login_required, set_timeout_if_needed, check_if_new_ip, check_if_user_is_timeouted
+from utils import validate_password, login_required, set_timeout_if_needed, \
+    check_if_new_ip, check_if_user_is_timeouted
 import bleach
 import time
 import markdown
@@ -20,6 +21,7 @@ load_dotenv(verbose=True)
 SECRET_CREDENTIALS = getenv("FLASK_SECRET_KEY")
 
 default = Blueprint("default", __name__, url_prefix="")
+
 
 def create_app():
     app = Flask(__name__)
@@ -40,7 +42,7 @@ def index():
         DB.cursor.execute("INSERT INTO Logins (username, time, remote_ip, result) VALUES (%s, %s, %s, %s)",
                           (username, time.strftime("%Y-%m-%d %H:%M:%S"), remote_ip, "1"))
         check_if_new_ip(username, remote_ip)
-        return redirect(url_for('user', username=username), code=302)
+        return redirect(f"/user/{username}", code=302)
     return redirect("/authenticate", code=302)
 
 
@@ -74,7 +76,7 @@ def add_note():
     DB.cursor.execute("INSERT INTO Notes (owner_id, title, content, encrypted, public) VALUES (%s, %s, %s, %s, %s)",
                       (owner_id, title, markdown_note, encrypted, public))
     DB.connection.commit()
-    return redirect(url_for('user', username=jwt_data["username"]), code=302)
+    return redirect(f"/user/{jwt_data['username']}", code=302)
 
 
 @default.route("/authenticate", methods=["GET"])
@@ -104,7 +106,7 @@ def authenticate():
         password_in_db = DB.cursor.fetchone()[0]
         condiction = check_password(password, password_in_db.encode("utf-8"))
         if condiction:
-            response = redirect(f"/user/{username}", code=200)
+            response = redirect(f"/user/{username}", code=302)
             response.set_cookie("jwt", create_username_jwt(
                 username), secure=True, httponly=True)
             return response

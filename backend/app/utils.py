@@ -71,7 +71,6 @@ def set_timeout_if_needed(username: str):
         print(e)
 
 
-
 def get_nth_login(username: str, nth_login: str):
     DB.cursor.execute(
         "SELECT time FROM Logins WHERE username = %s AND result = false ORDER BY time DESC LIMIT 1 OFFSET %s", (username, nth_login))
