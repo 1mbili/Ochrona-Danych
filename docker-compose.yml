@@ -38,6 +38,7 @@ services:
       - db-password
     volumes:
       - ./backend/app:/var/www/app
+      - ./backend/tests:/var/www/tests
     networks:
       - backnet
       - frontnet

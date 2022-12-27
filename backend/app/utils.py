@@ -69,7 +69,7 @@ def set_timeout_if_needed(username: str):
             DB.connection.commit()
     except Exception as e:
         print(e)
-        return
+
 
 
 def get_nth_login(username: str, nth_login: str):
@@ -78,7 +78,7 @@ def get_nth_login(username: str, nth_login: str):
     try:
         return DB.cursor.fetchone()[0]
     except:
-        raise Exception("Not enough logins")
+        raise Exception("Za mało loginów")
 
 
 def check_if_user_is_timeouted(username: str):

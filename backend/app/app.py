@@ -8,7 +8,7 @@ import time
 import markdown
 import secrets
 from os import getenv
-from flask import Flask, flash, request, redirect, make_response, url_for
+from flask import Flask, flash, request, redirect, make_response, url_for, Blueprint
 from flask import render_template
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -18,17 +18,20 @@ load_dotenv(verbose=True)
 
 
 SECRET_CREDENTIALS = getenv("FLASK_SECRET_KEY")
-app = Flask(__name__)
-app.secret_key = SECRET_CREDENTIALS
-app.wsgi_app = ProxyFix(
-    app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
-)
+
+default = Blueprint("default", __name__, url_prefix="")
+
+def create_app():
+    app = Flask(__name__)
+    app.secret_key = SECRET_CREDENTIALS
+    app.register_blueprint(default)
+    return app
 
 
 DB = DBManager(password_file='/run/secrets/db-password')
 
 
-@app.route("/", methods=["GET"])
+@default.route("/", methods=["GET"])
 def index():
     jwt = request.cookies.get("jwt")
     if jwt_data := validate_token(jwt):
@@ -42,7 +45,7 @@ def index():
 
 
 @login_required
-@app.route("/user/<username>", methods=["GET"])
+@default.route("/user/<username>", methods=["GET"])
 def user(username):
     jwt = validate_token(request.cookies.get("jwt"))
     if jwt and username == jwt["username"]:
@@ -51,7 +54,7 @@ def user(username):
 
 
 @login_required
-@app.route("/user/addNote", methods=["POST"])
+@default.route("/user/addNote", methods=["POST"])
 def add_note():
     jwt_data = validate_token(request.cookies.get("jwt"))
     title = bleach.clean(request.form.get("title", ""))
@@ -74,12 +77,12 @@ def add_note():
     return redirect(url_for('user', username=jwt_data["username"]), code=302)
 
 
-@app.route("/authenticate", methods=["GET"])
+@default.route("/authenticate", methods=["GET"])
 def get_authenticate():
     return render_template("login-form.html")
 
 
-@app.route("/authenticate", methods=["POST"])
+@default.route("/authenticate", methods=["POST"])
 def authenticate():
     time.sleep(0.25)
     subpages = ["register", "restore_acces", "anonymous_view"]
@@ -91,7 +94,7 @@ def authenticate():
     password = bleach.clean(request.form.get("password", ""))
     if any([username == "", password == ""]):
         flash("Wypełnij wszystkie pola", 'error-msg')
-        return redirect(request.url)
+        return redirect("/authenticate", code=302)
     if check_if_user_is_timeouted(username):
         flash("Zbyt wiele nieudanych prób logowania. Spróbuj ponownie za 3 minuty")
         return redirect("/authenticate", code=302)
@@ -101,11 +104,10 @@ def authenticate():
         password_in_db = DB.cursor.fetchone()[0]
         condiction = check_password(password, password_in_db.encode("utf-8"))
         if condiction:
-            response = redirect(url_for('user', username=username), code=302)
+            response = redirect(f"/user/{username}", code=200)
             response.set_cookie("jwt", create_username_jwt(
-                username), secure=True, httponly=True, samesite="Strict")
+                username), secure=True, httponly=True)
             return response
-        raise Exception()
     except:
         flash('Niepoprawna nazwa użytkownika lub hasło')
         remote_ip = request.environ['REMOTE_ADDR']
@@ -116,31 +118,31 @@ def authenticate():
             set_timeout_if_needed(username)
         except Exception as e:
             print(e)
-    return redirect(request.url)
+    return redirect("/authenticate", code=302)
 
 
-@app.route("/register", methods=["GET"])
+@default.route("/register", methods=["GET"])
 def get_register():
     return render_template("register-form.html")
 
 
-@app.route("/register", methods=["POST"])
+@default.route("/register", methods=["POST"])
 def register():
     username = bleach.clean(request.form.get("username", ""))
     password = bleach.clean(request.form.get("password", ""))
     email = bleach.clean(request.form.get("email", ""))
     if any([username == "", password == "", email == ""]):
         flash("Wypełnij wszystkie pola", 'error-msg')
-        return redirect(request.url)
+        return redirect("/authenticate")
     msg, creds_check = validate_password(password)
     if creds_check is False:
         flash(msg, 'error-msg')
-        return redirect(request.url)
+        return redirect("/authenticate")
     DB.cursor.execute(
         "SELECT username FROM Users WHERE username = %s", (username,))
     if DB.cursor.fetchone() is not None:
         flash("Użytkownik z taką nazwą już istnieje", 'error-msg')
-        return redirect(request.url)
+        return redirect("/authenticate")
     password = encrypt_password(password)
     DB.cursor.execute(
         "INSERT INTO Users (username, password, email) VALUES (%s, %s, %s)", (username, password, email))
@@ -150,7 +152,7 @@ def register():
 
 
 @login_required
-@app.route("/notes", methods=["GET"])
+@default.route("/notes", methods=["GET"])
 def user_notes():
     jwt_data = validate_token(request.cookies.get("jwt"))
     DB.cursor.execute(
@@ -167,7 +169,7 @@ def user_notes():
     return notes_markdown
 
 
-@app.route("/logout", methods=["GET"])
+@default.route("/logout", methods=["GET"])
 def logout():
     response = redirect("/", code=302)
     response.set_cookie("jwt", b"", expires=0)
@@ -175,7 +177,7 @@ def logout():
 
 
 @login_required
-@app.route("/user/changeNotesSettings", methods=["POST"])
+@default.route("/user/changeNotesSettings", methods=["POST"])
 def change_notes_settings():
     jwt_data = validate_token(request.cookies.get("jwt"))
     client_data = request.json['value']
@@ -204,7 +206,7 @@ def change_notes_settings():
     return "OK", 204
 
 
-@app.route("/restore_acces", methods=["GET", "POST"])
+@default.route("/restore_acces", methods=["GET", "POST"])
 def restore_acces():
     if request.method == "GET":
         return make_response(render_template("restore_acces.html"))
@@ -227,10 +229,10 @@ def restore_acces():
     except Exception as e:
         print(e)
         flash("Nie ma takiego użytkownika", 'error-msg')
-        return redirect(request.url)
+        return redirect("/authenticate")
 
 
-@app.route("/restore_acces/verify", methods=["GET", "POST"])
+@default.route("/restore_acces/verify", methods=["GET", "POST"])
 def set_new_password():
     """Update password for user"""
     if request.method == "GET":
@@ -242,11 +244,11 @@ def set_new_password():
         new_password_2 = bleach.clean(request.form.get("new_password_2", ""))
         if new_password != new_password_2:
             flash("Hasła nie są takie same")
-            return redirect(request.url)
+            return redirect("/authenticate")
         msg, creds_check = validate_password(new_password)
         if creds_check is False:
             flash(msg)
-            return redirect(request.url)
+            return redirect("/authenticate")
         username = jwt_restore_data['username_restore']
         DB.cursor.execute(" \
         SELECT TEMP_CODES.code, TEMP_CODES.expire_time, TEMP_CODES.user_id \
@@ -256,13 +258,12 @@ def set_new_password():
         ORDER By id_code DESC LIMIT 1 \
         ", (username,))
         code, expire_time, user_id = DB.cursor.fetchone()
-        print(code, token)
         if code != token:
             flash("Błędny kod")
-            return redirect(request.url)
+            return redirect("/authenticate")
         if expire_time < datetime.now():
             flash("Kod wygasł")
-            return redirect(request.url)
+            return redirect("/authenticate")
         DB.cursor.execute(
             "DELETE FROM TEMP_CODES WHERE user_id = %s", (user_id,))
         DB.connection.commit()
@@ -276,12 +277,12 @@ def set_new_password():
     return redirect("/restore_acces")
 
 
-@app.route("/anonymous_view", methods=["GET"])
+@default.route("/anonymous_view", methods=["GET"])
 def anonymous_view():
     return render_template("public_notes.html")
 
 
-@app.route("/public_notes", methods=["GET"])
+@default.route("/public_notes", methods=["GET"])
 def public_notes():
     try:
         DB.cursor.execute(
