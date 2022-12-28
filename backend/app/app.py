@@ -27,6 +27,7 @@ def create_app():
     app = Flask(__name__)
     app.secret_key = SECRET_CREDENTIALS
     app.register_blueprint(default)
+    app = ProxyFix(app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     return app
 
 
@@ -106,7 +107,7 @@ def authenticate():
         password_in_db = DB.cursor.fetchone()[0]
         condiction = check_password(password, password_in_db.encode("utf-8"))
         if condiction:
-            response = redirect(f"/user/{username}", code=302)
+            response = redirect(f"/", code=302)
             response.set_cookie("jwt", create_username_jwt(
                 username), secure=True, httponly=True)
             return response
@@ -139,12 +140,12 @@ def register():
     msg, creds_check = validate_password(password)
     if creds_check is False:
         flash(msg, 'error-msg')
-        return redirect("/authenticate")
+        return redirect("/register")
     DB.cursor.execute(
         "SELECT username FROM Users WHERE username = %s", (username,))
     if DB.cursor.fetchone() is not None:
         flash("Użytkownik z taką nazwą już istnieje", 'error-msg')
-        return redirect("/authenticate")
+        return redirect("/register")
     password = encrypt_password(password)
     DB.cursor.execute(
         "INSERT INTO Users (username, password, email) VALUES (%s, %s, %s)", (username, password, email))

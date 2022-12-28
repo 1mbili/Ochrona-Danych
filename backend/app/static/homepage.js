@@ -1,5 +1,4 @@
 window.addEventListener("load", function () {
-    start = document.getElementById("start")
     event.preventDefault()
     fetch('/notes', { method: "get" })
         .then((response) => response.text())

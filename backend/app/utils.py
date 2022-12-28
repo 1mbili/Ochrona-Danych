@@ -46,7 +46,6 @@ def calculate_entropy(text: str) -> float:
             entropy += - p_x*math.log2(p_x)
     return entropy
 
-
 def login_required(f):
     """Veryfies if user has valid jwt token"""
     @wraps(f)
