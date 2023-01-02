@@ -3,7 +3,7 @@ Aplikacja na przedmiot ochrona danych
 
 # Inicjacja Bazy danych do testów
 
-docker compose run --rm -it -v ./backend/app:/var/www/app backend python app/db_create.py
+docker compose run --rm -it -v ./backend/app:/var/www/app backend python app/db_create.py \n
 przykładowe login hasło
 Jarek bob
 admin admin
