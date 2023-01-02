@@ -20,14 +20,6 @@ services:
       - 3306
       - 33060
 
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 9090:8080
-    networks:
-      - backnet
-
   backend:
     build:
       context: backend
