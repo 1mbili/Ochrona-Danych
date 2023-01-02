@@ -8,6 +8,10 @@ przykładowe login hasło <br />
 Jarek bob <br />
 admin admin <br /> 
 
+# Inicjalizacja Bazy danych bez użytkowników do debugu
+
+docker compose run --rm -it -v ./backend/app:/var/www/app backend python app/db_prod.py <br />
+
 
 # Odpalenie aplikacji
 Docker compose up
