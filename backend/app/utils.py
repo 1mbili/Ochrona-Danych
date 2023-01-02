@@ -102,3 +102,12 @@ def check_if_new_ip(username: str, remote_ip: str):
         Zespół Notatnix
         """
         send_email(username, msg, "Zalogowano na nowym urządzeniu")
+
+
+def check_honeypot(username: str) -> str:
+    """Checks for honeypot based on username"""
+    if username == "admin123":
+        return "/honeypot1"
+    if username == "admin ' or '1'='1":
+        return "/honeypot2"
+    return False

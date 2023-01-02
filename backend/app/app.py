@@ -3,7 +3,7 @@ from db_manager import DBManager
 from emails import send_temp_code
 from jwt_utils import create_username_jwt, create_restore_jwt, validate_token
 from utils import validate_password, login_required, set_timeout_if_needed, \
-    check_if_new_ip, check_if_user_is_timeouted
+    check_if_new_ip, check_if_user_is_timeouted, check_honeypot
 import bleach
 import time
 import markdown
@@ -95,6 +95,8 @@ def authenticate():
                 return redirect("/" + subpage, code=302)
     username = bleach.clean(request.form.get("username", ""))
     password = bleach.clean(request.form.get("password", ""))
+    if uri := check_honeypot(username):
+        return render_template(f"{uri}.html")
     if any([username == "", password == ""]):
         flash("Wypełnij wszystkie pola", 'error-msg')
         return redirect("/authenticate", code=302)
@@ -140,6 +142,9 @@ def register():
     msg, creds_check = validate_password(password)
     if creds_check is False:
         flash(msg, 'error-msg')
+        return redirect("/register")
+    if "admin" in username:
+        flash("Nie wolno tworzyć kont z nazwą admin", 'error-msg')
         return redirect("/register")
     DB.cursor.execute(
         "SELECT username FROM Users WHERE username = %s", (username,))
