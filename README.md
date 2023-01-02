@@ -4,4 +4,4 @@ Aplikacja na przedmiot ochrona danych
 # Odpalenie aplikacji
 Docker compose up
 
-hhtp://localhost
+http://localhost
