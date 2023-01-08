@@ -202,7 +202,7 @@ def change_notes_settings():
     for note, user_val in zip(notes, client_data):
         note_id = int(user_val[0])
         encrypted_password = bleach.clean(user_val[1])
-        is_public = int(user_val[2]) 
+        is_public = int(user_val[2])
         if encrypted_password != "" and not note[3]:
             text_new = encrypt_note(note[2])
             password = encrypt_password(encrypted_password)
@@ -254,7 +254,8 @@ def set_new_password():
     if jwt_restore_data := validate_token(jwt):
         token = bleach.clean(request.form.get("token", ""))
         new_password = bleach.clean(request.form.get("new_password", ""))
-        new_password_2 = bleach.clean(request.form.get("new_password_conf", ""))
+        new_password_2 = bleach.clean(
+            request.form.get("new_password_conf", ""))
         print(new_password, new_password_2)
         if new_password != new_password_2:
             flash("Hasła nie są takie same")

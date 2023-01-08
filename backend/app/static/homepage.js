@@ -45,10 +45,6 @@ function send_tabelka() {
     xhr.send(JSON.stringify({
         value: vals
     }));
-    console.log(vals)
-    setTimeout(() => {
-        console.log("Delayed for 1 second.");
-      }, 10000)
     return vals;
 }
 
