@@ -19,15 +19,11 @@ function set_tabelka(notes) {
         cell2 = row.insertCell();
         text2 = `
         <div>
-        <label class="tabela_label">Zaszyfruj</label>
-        <input type="checkbox" id="checkbox_enc${i}"> 
+        <label class="tabela_label">Zaszyfruj/Odszyfruj</label>
+        <input type="password" id="checkbox_enc${i}"> 
         </div>
         `;
         cell2.innerHTML = text2
-        var elem = document.getElementById(`checkbox_enc${i}`);
-        if (vals[3] == "1") {
-            elem.checked = true;
-        }
         cell3 = row.insertCell();
         text3 = `
         <div>
@@ -37,7 +33,7 @@ function set_tabelka(notes) {
         `;
         cell3.innerHTML = text3
         var elem2 = document.getElementById(`checkbox_share${i}`);
-        if (vals[4] == "1") {
+        if (vals[3] == "1") {
             elem2.checked = true;
         }
         var next = i + 1;

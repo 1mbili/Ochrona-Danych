@@ -20,6 +20,13 @@ services:
       - 3306
       - 33060
 
+  adminer:
+    image: adminer
+    restart: always
+    networks:
+      - backnet
+
+
   backend:
     build:
       context: backend

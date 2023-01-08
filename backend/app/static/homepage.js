@@ -27,6 +27,9 @@ function send_tabelka() {
                         vals2.push("0");
                     }
                 }
+                else {
+                    vals2.push(input.value);
+                }
             }
         }
         vals.push(vals2);
@@ -42,6 +45,10 @@ function send_tabelka() {
     xhr.send(JSON.stringify({
         value: vals
     }));
+    console.log(vals)
+    setTimeout(() => {
+        console.log("Delayed for 1 second.");
+      }, 10000)
     return vals;
 }
 

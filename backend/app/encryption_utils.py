@@ -24,19 +24,16 @@ def check_password(password: str, hashed_password: bytes) -> bool:
     return bcrypt.checkpw(bytes(password+PEPPER, "utf-8"), hashed_password)
 
 
-def encrypt_note(title: str, markdown: str) -> tuple:
+def encrypt_note(markdown: str) -> tuple:
     """Encrypt note"""
-    title = aes_encrypt(title)
     markdown = aes_encrypt(markdown)
-    return title, markdown
+    return markdown
 
 
-def decrypt_note(title: str, markdown: str) -> tuple:
+def decrypt_note(markdown: str) -> tuple:
     """Decrypt note"""
-    title = aes_decrypt(title).decode("utf-8")
     markdown = aes_decrypt(markdown).decode("utf-8")
-    print("marrl", title, markdown)
-    return title, markdown
+    return markdown
 
 
 def aes_encrypt(text: str) -> str:

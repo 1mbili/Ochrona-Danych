@@ -9,7 +9,7 @@ import time
 import markdown
 import secrets
 from os import getenv
-from flask import Flask, flash, request, redirect, make_response, url_for, Blueprint
+from flask import Flask, flash, request, redirect, make_response, Blueprint
 from flask import render_template
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -62,20 +62,21 @@ def add_note():
     jwt_data = validate_token(request.cookies.get("jwt"))
     title = bleach.clean(request.form.get("title", ""))
     markdown_note = bleach.clean(request.form.get("markdown", ""))
-    encrypted = bleach.clean(request.form.get("encrypt", '0'))
+    encrypted = bleach.clean(request.form.get("encrypt", ''))
     public = bleach.clean(request.form.get("public", '0'))
+    password = None
     if title == "" or markdown_note == "":
         return "Empty note", 204
-    if encrypted == "on":
-        title, markdown_note = encrypt_note(title, markdown_note)
-        encrypted = '1'
+    if encrypted != "":
+        markdown_note = encrypt_note(markdown_note)
+        password = encrypt_password(encrypted)
     if public == "on":
         public = '1'
     DB.cursor.execute(
         "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
     owner_id = DB.cursor.fetchone()[0]
     DB.cursor.execute("INSERT INTO Notes (owner_id, title, content, encrypted, public) VALUES (%s, %s, %s, %s, %s)",
-                      (owner_id, title, markdown_note, encrypted, public))
+                      (owner_id, title, markdown_note, password, public))
     DB.connection.commit()
     return redirect(f"/user/{jwt_data['username']}", code=302)
 
@@ -167,7 +168,7 @@ def user_notes():
         "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
     owner_id = DB.cursor.fetchone()[0]
     DB.cursor.execute(
-        "SELECT id, title, content, encrypted, public FROM Notes WHERE owner_id = %s", (owner_id,))
+        "SELECT id, title, content, public FROM Notes WHERE owner_id = %s", (owner_id,))
     notes = DB.cursor.fetchall()
     notes_markdown = []
     for note in notes:
@@ -189,6 +190,7 @@ def logout():
 def change_notes_settings():
     jwt_data = validate_token(request.cookies.get("jwt"))
     client_data = request.json['value']
+    print(client_data)
     DB.cursor.execute(
         "SELECT id FROM Users WHERE username = %s", (jwt_data["username"],))
     owner_id = DB.cursor.fetchone()[0]
@@ -196,20 +198,23 @@ def change_notes_settings():
         "SELECT id, title, content, encrypted, public FROM Notes WHERE owner_id = %s ORDER BY id ASC", (owner_id,))
     notes = DB.cursor.fetchall()
     if len(notes) != len(client_data):
-        return "Błąd  ", 401
+        return "Błąd", 401
     for note, user_val in zip(notes, client_data):
-        note_id, is_encrypted, is_public = (int(x) for x in user_val)
-        if is_encrypted == 1 and not note[3]:
-            title_new, text_new = encrypt_note(note[1], note[2])
+        note_id = int(user_val[0])
+        encrypted_password = bleach.clean(user_val[1])
+        is_public = int(user_val[2]) 
+        if encrypted_password != "" and not note[3]:
+            text_new = encrypt_note(note[2])
+            password = encrypt_password(encrypted_password)
             DB.cursor.execute(
-                "UPDATE Notes SET title = %s, content = %s, encrypted = %s, public = %s WHERE id = %s", (title_new, text_new, is_encrypted, is_public, note_id))
-        elif is_encrypted == 0 and note[3]:
-            title_new, text_new = decrypt_note(note[1], note[2])
+                "UPDATE Notes SET content = %s, encrypted = %s, public = %s WHERE id = %s", (text_new, password, is_public, note_id))
+        elif note[3] and check_password(encrypted_password, note[3].encode("utf-8")):
+            text_new = decrypt_note(note[2])
             DB.cursor.execute(
-                "UPDATE Notes SET title = %s, content = %s, encrypted = %s, public = %s WHERE id = %s", (title_new, text_new, is_encrypted, is_public, note_id))
+                "UPDATE Notes SET content = %s, encrypted = %s, public = %s WHERE id = %s", (text_new, None, is_public, note_id))
         else:
             DB.cursor.execute(
-                "UPDATE Notes SET encrypted = %s, public = %s WHERE id = %s", (is_encrypted, is_public, note_id))
+                "UPDATE Notes SET public = %s WHERE id = %s", (is_public, note_id))
         DB.connection.commit()
     return "OK", 204
 
@@ -249,14 +254,15 @@ def set_new_password():
     if jwt_restore_data := validate_token(jwt):
         token = bleach.clean(request.form.get("token", ""))
         new_password = bleach.clean(request.form.get("new_password", ""))
-        new_password_2 = bleach.clean(request.form.get("new_password_2", ""))
+        new_password_2 = bleach.clean(request.form.get("new_password_conf", ""))
+        print(new_password, new_password_2)
         if new_password != new_password_2:
             flash("Hasła nie są takie same")
-            return redirect("/authenticate")
+            return redirect("/restore_acces/verify")
         msg, creds_check = validate_password(new_password)
         if creds_check is False:
             flash(msg)
-            return redirect("/authenticate")
+            return redirect("/restore_acces/verify")
         username = jwt_restore_data['username_restore']
         DB.cursor.execute(" \
         SELECT TEMP_CODES.code, TEMP_CODES.expire_time, TEMP_CODES.user_id \
@@ -268,10 +274,10 @@ def set_new_password():
         code, expire_time, user_id = DB.cursor.fetchone()
         if code != token:
             flash("Błędny kod")
-            return redirect("/authenticate")
+            return redirect("/restore_acces/verify")
         if expire_time < datetime.now():
             flash("Kod wygasł")
-            return redirect("/authenticate")
+            return redirect("/restore_acces/verify")
         DB.cursor.execute(
             "DELETE FROM TEMP_CODES WHERE user_id = %s", (user_id,))
         DB.connection.commit()
@@ -294,7 +300,7 @@ def anonymous_view():
 def public_notes():
     try:
         DB.cursor.execute(
-            "SELECT u.id, u.username, n.title, n.content FROM Notes n INNER JOIN Users u ON n.owner_id = u.id WHERE public = 1 ORDER BY id ASC")
+            "SELECT u.id, u.username, n.title, n.content FROM Notes n INNER JOIN Users u ON n.owner_id = u.id WHERE public = 1 AND encrypted is NULL ORDER BY id ASC")
         notes = DB.cursor.fetchall()
         notes_markdown = []
         for note in notes:

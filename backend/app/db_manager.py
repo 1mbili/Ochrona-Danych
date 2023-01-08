@@ -84,11 +84,11 @@ class DBManager:
         self.cursor.execute(
             "INSERT INTO Users (username, password, email) VALUES ('admin', %s, 'mailgrupowy755@gmail.com')", (password, ))
         self.cursor.execute(
-            "INSERT INTO Notes (title, content, encrypted, public, owner_id) VALUES ('Test', 'Test', 0, 1, 1)")
+            "INSERT INTO Notes (title, content, encrypted, public, owner_id) VALUES ('Test', 'Test', NULL, 1, 1)")
         self.cursor.execute(
             "INSERT INTO Users (username, password, email) VALUES ('Jarek', %s, 'mailgrupowy755@gmail.com')", (password_Jarek, ))
         self.cursor.execute(
-            "INSERT INTO Notes (title, content, encrypted, public, owner_id) VALUES ('Lorem ipsum', %s, 0, 1, 2)", (TEXT, ))
+            "INSERT INTO Notes (title, content, encrypted, public, owner_id) VALUES ('Lorem ipsum', %s, NULL, 1, 2)", (TEXT, ))
         self.connection.commit()
 
     def Create_Tables(self):
@@ -100,7 +100,7 @@ class DBManager:
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS Users (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(255) NOT NULL, password VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL,  UNIQUE (username))")
         self.cursor.execute(
-            "CREATE TABLE IF NOT EXISTS Notes (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, content MEDIUMTEXT NOT NULL, encrypted BOOLEAN, public BOOLEAN, owner_id INT, FOREIGN KEY (owner_id) REFERENCES Users(id))")
+            "CREATE TABLE IF NOT EXISTS Notes (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, content MEDIUMTEXT NOT NULL, encrypted VARCHAR(255), public BOOLEAN, owner_id INT, FOREIGN KEY (owner_id) REFERENCES Users(id))")
         self.cursor.execute(
             "CREATE TABLE IF NOT EXISTS Logins (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(255) NOT NULL, time DATETIME NOT NULL, remote_ip VARCHAR(255) NOT NULL, result BOOLEAN)")
         self.cursor.execute(
