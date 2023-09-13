@@ -21,6 +21,7 @@ def encrypt_password(password: str) -> bytes:
 
 def check_password(password: str, hashed_password: bytes) -> bool:
     """Check if password is correct"""
+    
     return bcrypt.checkpw(bytes(password+PEPPER, "utf-8"), hashed_password)
 
 

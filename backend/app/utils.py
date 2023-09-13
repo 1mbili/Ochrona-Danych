@@ -15,7 +15,7 @@ load_dotenv(verbose=True)
 
 
 ENTROPY_TRESHOLD = 3.25
-DB = DBManager(password_file='/run/secrets/db-password')
+DB = DBManager()
 
 
 def validate_password(password: str) -> bool:

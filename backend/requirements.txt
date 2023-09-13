@@ -1,5 +1,4 @@
 Flask
-mysql-connector-python
 pyjwt
 python-dotenv
 bcrypt
@@ -8,3 +7,6 @@ pycryptodome
 Markdown
 gunicorn
 pytest
+mysql-connector-python
+azure-identity
+azure-keyvault-secrets

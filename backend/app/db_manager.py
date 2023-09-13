@@ -1,6 +1,8 @@
 import mysql.connector
 from encryption_utils import encrypt_password
-
+from azure.keyvault.secrets import SecretClient
+from azure.identity import DefaultAzureCredential
+from os import getenv
 TEXT = """
 # Herboso iaculum quando
 
@@ -64,17 +66,22 @@ nescit Si.
 
 """
 
-
 class DBManager:
-    def __init__(self, database='Notatnix', host="mysql", user="root", password_file=None):
-        pf = open(password_file, 'r', encoding='utf-8')
+    def __init__(self, database='defaultdb', host="mysql", user="root"):
+        keyVaultName = getenv("KEY_VAULT_NAME")
+        KVUri = f"https://{keyVaultName}.vault.azure.net"
+        credential = DefaultAzureCredential()
+        client = SecretClient(vault_url=KVUri, credential=credential)
+        password = client.get_secret("mysql-password").value
+        host = client.get_secret("mysql-host").value
+        user = client.get_secret("mysql-user").value
         self.connection = mysql.connector.connect(
             user=user,
-            password=pf.read(),
+            password=password,
             host=host,  # name of the mysql service as set in the docker compose file
-            database=database
+            database=database,
+            port=25060
         )
-        pf.close()
         self.cursor = self.connection.cursor(buffered=True)
 
     def debug_propagate_db(self):

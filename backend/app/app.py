@@ -31,7 +31,7 @@ def create_app():
     return app
 
 
-DB = DBManager(password_file='/run/secrets/db-password')
+DB = DBManager()
 
 
 @default.route("/", methods=["GET"])
