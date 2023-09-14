@@ -8,10 +8,12 @@ from dotenv import load_dotenv
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import pad, unpad
+from azure_handler import AzureHandler
 load_dotenv(verbose=True)
 
-PEPPER = getenv("PEPPER")
-AES_KEY = getenv("AES_KEY").encode()
+az_handler = AzureHandler()
+PEPPER = az_handler.get_secret("PEPPER")
+AES_KEY = az_handler.get_secret("AES-KEY").encode()
 
 
 def encrypt_password(password: str) -> bytes:

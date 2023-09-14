@@ -2,20 +2,23 @@
 Utils functions for flask app
 """
 from jwt_utils import validate_token
+from azure_handler import AzureHandler
 from emails import send_email
 from db_manager import DBManager
 import secrets
 import string
 import math
 from functools import wraps
-from dotenv import load_dotenv
 from flask import request, redirect, url_for
 from datetime import datetime, timedelta
-load_dotenv(verbose=True)
 
 
 ENTROPY_TRESHOLD = 3.25
-DB = DBManager()
+az_handler = AzureHandler()
+db_pass = az_handler.get_secret("mysql-password")
+az_user = az_handler.get_secret("mysql-user")
+az_hostname = az_handler.get_secret("mysql-host")
+DB = DBManager(db_pass, az_hostname, az_user)
 
 
 def validate_password(password: str) -> bool:

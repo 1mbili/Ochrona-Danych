@@ -1,4 +1,5 @@
 from encryption_utils import encrypt_password, encrypt_note, decrypt_note, check_password
+from azure_handler import AzureHandler
 from db_manager import DBManager
 from emails import send_temp_code
 from jwt_utils import create_username_jwt, create_restore_jwt, validate_token
@@ -17,21 +18,27 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv(verbose=True)
 
-
-SECRET_CREDENTIALS = getenv("FLASK_SECRET_KEY")
+az_handler = AzureHandler()
+db_pass = az_handler.get_secret("mysql-password")
+az_user = az_handler.get_secret("mysql-user")
+az_hostname = az_handler.get_secret("mysql-host")
+flask_key = az_handler.get_secret("FLASK-SECRET-KEY")
 
 default = Blueprint("default", __name__, url_prefix="")
 
 
 def create_app():
     app = Flask(__name__)
-    app.secret_key = SECRET_CREDENTIALS
+    app.secret_key = flask_key
     app.register_blueprint(default)
     app = ProxyFix(app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     return app
 
-
-DB = DBManager()
+az_handler = AzureHandler()
+db_pass = az_handler.get_secret("mysql-password")
+az_user = az_handler.get_secret("mysql-user")
+az_hostname = az_handler.get_secret("mysql-host")
+DB = DBManager(db_pass, az_hostname, az_user)
 
 
 @default.route("/", methods=["GET"])

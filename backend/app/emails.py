@@ -5,13 +5,13 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 from os import getenv
-from dotenv import load_dotenv
-load_dotenv(verbose=True)
+from azure_handler import AzureHandler
 
+az_handler = AzureHandler()
 
 def send_email(recivers: list, message: str, title: str):
-    sender = getenv("GMAIL_USER")
-    password = getenv("GMAIL_PASS")
+    sender = az_handler.get_secret("GMAIL-USER")
+    password = az_handler.get_secret("GMAIL-PASS")
     email_msg = EmailMessage()
     email_msg["From"] = sender
     email_msg["To"] = recivers

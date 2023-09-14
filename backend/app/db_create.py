@@ -1,6 +1,11 @@
 from db_manager import DBManager
+from azure_handler import AzureHandler
 
-db = DBManager(password_file='/run/secrets/db-password')
+az_handler = AzureHandler()
+db_pass = az_handler.get_secret("mysql-password")
+az_user = az_handler.get_secret("mysql-user")
+az_hostname = az_handler.get_secret("mysql-host")
+db = DBManager(db_pass, az_hostname, az_user)
 db.Create_Tables()
 db.debug_propagate_db()
 

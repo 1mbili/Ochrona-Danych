@@ -67,14 +67,7 @@ nescit Si.
 """
 
 class DBManager:
-    def __init__(self, database='defaultdb', host="mysql", user="root"):
-        keyVaultName = getenv("KEY_VAULT_NAME")
-        KVUri = f"https://{keyVaultName}.vault.azure.net"
-        credential = DefaultAzureCredential()
-        client = SecretClient(vault_url=KVUri, credential=credential)
-        password = client.get_secret("mysql-password").value
-        host = client.get_secret("mysql-host").value
-        user = client.get_secret("mysql-user").value
+    def __init__(self, password, host, user, database='defaultdb'):
         self.connection = mysql.connector.connect(
             user=user,
             password=password,
