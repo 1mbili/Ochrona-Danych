@@ -119,7 +119,7 @@ def authenticate():
         if condiction:
             response = redirect(f"/", code=302)
             response.set_cookie("jwt", create_username_jwt(
-                username), secure=True, httponly=True)
+                username), httponly=True)
             return response
     except:
         flash('Niepoprawna nazwa użytkownika lub hasło')
