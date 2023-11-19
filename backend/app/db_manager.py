@@ -67,13 +67,13 @@ nescit Si.
 """
 
 class DBManager:
-    def __init__(self, password, host, user, database='defaultdb'):
+    def __init__(self, password, host, user, database='defaultdb', port=3306):
         self.connection = mysql.connector.connect(
             user=user,
             password=password,
             host=host,  # name of the mysql service as set in the docker compose file
             database=database,
-            port=25060
+            port=port
         )
         self.cursor = self.connection.cursor(buffered=True)
 
