@@ -67,7 +67,7 @@ nescit Si.
 """
 
 class DBManager:
-    def __init__(self, password, host, user, database='defaultdb', port=3306):
+    def __init__(self, password, host, user, port, database='defaultdb'):
         self.connection = mysql.connector.connect(
             user=user,
             password=password,

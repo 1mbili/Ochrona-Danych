@@ -22,8 +22,8 @@ az_handler = AzureHandler()
 db_pass = az_handler.get_secret("mysql-password")
 az_user = az_handler.get_secret("mysql-user")
 az_hostname = az_handler.get_secret("mysql-host")
+az_port = az_handler.get_secret("mysql-port")
 flask_key = az_handler.get_secret("FLASK-SECRET-KEY")
-
 default = Blueprint("default", __name__, url_prefix="")
 
 
@@ -34,11 +34,7 @@ def create_app():
     app = ProxyFix(app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     return app
 
-az_handler = AzureHandler()
-db_pass = az_handler.get_secret("mysql-password")
-az_user = az_handler.get_secret("mysql-user")
-az_hostname = az_handler.get_secret("mysql-host")
-DB = DBManager(db_pass, az_hostname, az_user)
+DB = DBManager(db_pass, az_hostname, az_user, az_port)
 
 
 @default.route("/", methods=["GET"])
