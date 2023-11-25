@@ -34,7 +34,7 @@ def create_app():
     app = ProxyFix(app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     return app
 
-DB = DBManager(db_pass, az_hostname, az_user, az_port)
+DB = DBManager(db_pass, az_hostname, az_user, az_port, "defaultdb")
 
 
 @default.route("/", methods=["GET"])

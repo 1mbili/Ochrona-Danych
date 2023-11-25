@@ -67,15 +67,30 @@ nescit Si.
 """
 
 class DBManager:
-    def __init__(self, password, host, user, port, database='defaultdb'):
-        self.connection = mysql.connector.connect(
-            user=user,
-            password=password,
-            host=host,  # name of the mysql service as set in the docker compose file
-            database=database,
-            port=port
-        )
+    def __init__(self, password, host, user, port, database=None):
+        print(f"Connecting to {host} with user {user} and password {password} {port}")
+        if 'digitalocean' in host:
+            database = 'defaultdb'
+        if database:
+            self.connection = mysql.connector.connect(
+                user=user,
+                password=password,
+                host=host,  # name of the mysql service as set in the docker compose file
+                database=database,
+                port=port
+            )
+        else:
+            self.connection = mysql.connector.connect(
+                user=user,
+                password=password,
+                host=host,  # name of the mysql service as set in the docker compose file
+                port=port
+            )
         self.cursor = self.connection.cursor(buffered=True)
+
+    def create_database(self):
+        self.cursor.execute("CREATE DATABASE IF NOT EXISTS defaultdb")
+        self.connection.commit()
 
     def debug_propagate_db(self):
         # DEBUG ONLY

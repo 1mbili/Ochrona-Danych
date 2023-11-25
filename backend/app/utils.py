@@ -18,7 +18,8 @@ az_handler = AzureHandler()
 db_pass = az_handler.get_secret("mysql-password")
 az_user = az_handler.get_secret("mysql-user")
 az_hostname = az_handler.get_secret("mysql-host")
-DB = DBManager(db_pass, az_hostname, az_user)
+az_port = az_handler.get_secret("mysql-port")
+DB = DBManager(db_pass, az_hostname, az_user, az_port, "defaultdb")
 
 
 def validate_password(password: str) -> bool:
