@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Python: Flask",
+            "type": "python",
+            "request": "launch",
+            "module": "flask",
+            "python": "/home/bilu/miniconda3/bin/python",
+            "env": {
+                "FLASK_APP": "/home/bilu/Ochrona-Danych/backend/manage.py",
+                "FLASK_DEBUG": "1"
+            },
+            "args": [
+                "run",
+                "--no-debugger",
+                "--no-reload"
+            ],
+            "jinja": true,
+            "justMyCode": true
+        }
+    ]
+}
