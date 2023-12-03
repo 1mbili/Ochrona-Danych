@@ -7,11 +7,16 @@ from email.message import EmailMessage
 from os import getenv
 from azure_handler import AzureHandler
 
-az_handler = AzureHandler()
-
-def send_email(recivers: list, message: str, title: str):
+if getenv("FLASK_ENV") == "k8s":
+    sender = getenv("GMAIL-USER")
+    password = getenv("GMAIL-PASS")
+else:
+    az_handler = AzureHandler()
     sender = az_handler.get_secret("GMAIL-USER")
     password = az_handler.get_secret("GMAIL-PASS")
+
+
+def send_email(recivers: list, message: str, title: str):
     email_msg = EmailMessage()
     email_msg["From"] = sender
     email_msg["To"] = recivers

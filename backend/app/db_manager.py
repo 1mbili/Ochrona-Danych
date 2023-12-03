@@ -62,8 +62,6 @@ Tanti tamen stantibus cruribus obstaret inane, tellus, tellus ducem, curvique
 dolentem. In mora, suo Theseus succincta huic, ver deum fores in Dicta crura
 nescit Si.
 
-
-
 """
 
 class DBManager:

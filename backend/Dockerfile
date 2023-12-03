@@ -9,8 +9,9 @@ ENV PYTHONPATH "${PYTHONPATH}:/var/www/app"
 RUN apt-get update  && apt-get install -y --no-install-recommends gcc \
      && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt  --no-cache-dir
 COPY app app
 COPY manage.py manage.py
 COPY tests tests
-CMD ["python3", "-m", "flask", "run"]
+COPY entrypoint.sh entrypoint.sh
+ENTRYPOINT ["/bin/bash", "/var/www/entrypoint.sh"]

@@ -17,13 +17,19 @@ from dotenv import load_dotenv
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 load_dotenv(verbose=True)
-
-az_handler = AzureHandler()
-db_pass = az_handler.get_secret("mysql-password")
-az_user = az_handler.get_secret("mysql-user")
-az_hostname = az_handler.get_secret("mysql-host")
-az_port = az_handler.get_secret("mysql-port")
-flask_key = az_handler.get_secret("FLASK-SECRET-KEY")
+if getenv("FLASK_ENV") == "k8s":
+    db_pass = getenv("mysql-password")
+    az_user = getenv("mysql-user")
+    az_hostname = getenv("mysql-host")
+    az_port = getenv("mysql-port")
+    flask_key = getenv('FLASK-SECRET-KEY')
+else:
+    az_handler = AzureHandler()
+    db_pass = az_handler.get_secret("mysql-password")
+    az_user = az_handler.get_secret("mysql-user")
+    az_hostname = az_handler.get_secret("mysql-host")
+    az_port = az_handler.get_secret("mysql-port")
+    flask_key = az_handler.get_secret("FLASK-SECRET-KEY")
 default = Blueprint("default", __name__, url_prefix="")
 
 

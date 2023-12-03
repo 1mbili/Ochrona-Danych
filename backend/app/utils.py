@@ -11,14 +11,20 @@ import math
 from functools import wraps
 from flask import request, redirect, url_for
 from datetime import datetime, timedelta
-
+from os import getenv
 
 ENTROPY_TRESHOLD = 3.25
-az_handler = AzureHandler()
-db_pass = az_handler.get_secret("mysql-password")
-az_user = az_handler.get_secret("mysql-user")
-az_hostname = az_handler.get_secret("mysql-host")
-az_port = az_handler.get_secret("mysql-port")
+if getenv("FLASK_ENV") == "k8s":
+    db_pass = getenv("mysql-password")
+    az_user = getenv("mysql-user")
+    az_hostname = getenv("mysql-host")
+    az_port = getenv("mysql-port")
+else:
+    az_handler = AzureHandler()
+    db_pass = az_handler.get_secret("mysql-password")
+    az_user = az_handler.get_secret("mysql-user")
+    az_hostname = az_handler.get_secret("mysql-host")
+    az_port = az_handler.get_secret("mysql-port")
 DB = DBManager(db_pass, az_hostname, az_user, az_port, "defaultdb")
 
 

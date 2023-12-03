@@ -11,9 +11,13 @@ from Crypto.Util.Padding import pad, unpad
 from azure_handler import AzureHandler
 load_dotenv(verbose=True)
 
-az_handler = AzureHandler()
-PEPPER = az_handler.get_secret("PEPPER")
-AES_KEY = az_handler.get_secret("AES-KEY").encode()
+if getenv("FLASK_ENV") == "k8s":
+    PEPPER = getenv("PEPPER")
+    AES_KEY = getenv("AES-KEY").encode()
+else:
+    az_handler = AzureHandler()
+    PEPPER = az_handler.get_secret("PEPPER")
+    AES_KEY = az_handler.get_secret("AES-KEY").encode()
 
 
 def encrypt_password(password: str) -> bytes:

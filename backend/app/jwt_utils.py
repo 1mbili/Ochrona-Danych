@@ -4,9 +4,12 @@ Module for handling JWT tokens
 from datetime import datetime, timedelta
 from jwt import decode, encode
 from azure_handler import AzureHandler
-
-az_handler = AzureHandler()
-JWT_SECRET = az_handler.get_secret("JWT-SECRET")
+from os import getenv
+if getenv("FLASK_ENV") == "k8s":
+    JWT_SECRET = getenv("JWT-SECRET")
+else:
+    az_handler = AzureHandler()
+    JWT_SECRET = az_handler.get_secret("JWT-SECRET")
 
 
 def validate_token(token: str) -> bool:
